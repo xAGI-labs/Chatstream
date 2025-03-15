@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Remove deprecated domains configuration
     remotePatterns: [
       {
         protocol: 'https',
@@ -17,15 +16,9 @@ const nextConfig = {
       },
     ],
   },
-  // Fix experimental configuration to use the updated property name
-  experimental: {
-    // Replace serverComponentsExternalPackages with serverExternalPackages
-  },
-  // Disable TypeScript type checking during builds
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Disable ESLint during builds
   eslint: {
     ignoreDuringBuilds: true,
   }

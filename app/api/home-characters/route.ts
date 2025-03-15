@@ -48,6 +48,36 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
           displayOrder: order
         }
       });
+    } else if (!existingCharacter.imageUrl) {
+      // If character exists but doesn't have an avatar, generate one and update the record
+      console.log(`Updating existing character ${character.name} with missing avatar`);
+      
+      try {
+        // Convert null to undefined for generateAvatar
+        const description: string | undefined = existingCharacter.description || undefined;
+        
+        const imageUrl = await generateAvatar(character.name, description);
+        
+        // Update the existing record with the new avatar
+        // Ensure we never pass null to imageUrl by using empty string as last resort
+        await prisma.homeCharacter.update({
+          where: { id: existingCharacter.id },
+          data: { 
+            imageUrl: imageUrl || `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`
+          }
+        });
+        
+        console.log(`Updated avatar for ${character.name}`);
+      } catch (error) {
+        console.error(`Failed to update avatar for ${character.name}:`, error);
+        // Fallback to robohash
+        const fallbackUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+        
+        await prisma.homeCharacter.update({
+          where: { id: existingCharacter.id },
+          data: { imageUrl: fallbackUrl }
+        });
+      }
     }
     
     order++;
@@ -55,28 +85,33 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
 }
 
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const category = url.searchParams.get("category") || "popular";
+  
   try {
-    const url = new URL(req.url);
-    const category = url.searchParams.get("category");
-    
-    // Ensure we have home characters in the database
-    if (!category || category === "all") {
-      // Seed default characters if needed
-      await ensureHomeCharactersExist("popular", popularCharacters);
-      await ensureHomeCharactersExist("educational", educationalCharacters, 100); // Start educational at order 100
+    // Ensure characters exist in DB before returning them
+    if (category === "all" || category === "popular") {
+      await ensureHomeCharactersExist("popular", popularCharacters, 0);
     }
     
-    // Query for the requested characters
-    const where = category && category !== "all" ? { category } : {};
+    if (category === "all" || category === "educational") {
+      await ensureHomeCharactersExist("educational", educationalCharacters, 100);
+    }
     
-    const homeCharacters = await prisma.homeCharacter.findMany({
-      where,
+    // Query characters from database based on category
+    const query: any = {};
+    if (category !== "all") {
+      query.category = category;
+    }
+    
+    const characters = await prisma.homeCharacter.findMany({
+      where: query,
       orderBy: {
-        displayOrder: "asc"
+        displayOrder: 'asc'
       }
     });
     
-    return NextResponse.json(homeCharacters);
+    return NextResponse.json(characters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });
