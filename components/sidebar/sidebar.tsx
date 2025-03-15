@@ -25,6 +25,19 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
   
+  // Load collapsed state from localStorage on component mount
+  useEffect(() => {
+    const savedCollapsedState = localStorage.getItem('sidebarCollapsed')
+    if (savedCollapsedState !== null) {
+      setIsCollapsed(JSON.parse(savedCollapsedState))
+    }
+  }, [])
+  
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed))
+  }, [isCollapsed])
+  
   // Check if we're in a chat route
   const isChatRoute = pathname?.startsWith('/chat')
   
@@ -40,15 +53,15 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   // Get user's first name or username for display
   const displayName = user?.firstName || user?.username || "Guest"
   
-  // Pre-define avatar URLs directly to avoid unnecessary API calls
-  const harryPotterAvatar = `/api/avatar?name=Harry%20Potter&width=20&height=20`
-  const chotaBheemAvatar = `/api/avatar?name=Chota%20Bheem&width=20&height=20`
+  // Pre-define avatar URLs with cache parameter and timestamp to ensure long-term caching
+  const harryPotterAvatar = `/api/avatar?name=Harry%20Potter&width=20&height=20&cache=true&t=1`
+  const chotaBheemAvatar = `/api/avatar?name=Chota%20Bheem&width=20&height=20&cache=true&t=1`
 
   return (
     <>
       <aside className={cn(
-        "border-r border-[#222222] flex flex-col transition-all duration-300",
-        isCollapsed ? "w-[60px]" : "w-[180px]"
+        "border-r border-[#222222] flex flex-col transition-all duration-300 relative",
+        isCollapsed ? "w-[60px]" : "w-[220px]"
       )}>
         {/* Logo Section - Made clickable */}
         <Link href="/" className={cn(
@@ -66,19 +79,17 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
           {!isCollapsed && <span className="text-sm font-medium text-white">chatstream.ai</span>}
         </Link>
 
-        {/* Collapse Button - Only visible in chat routes */}
-        {isChatRoute && (
-          <div className="absolute top-4 -right-3">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="h-6 w-6 rounded-full border-[#333333] bg-background"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-            >
-              {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-            </Button>
-          </div>
-        )}
+        {/* Collapse Button - Visible on all routes */}
+        <div className="absolute top-4 -right-3">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-6 w-6 rounded-full border-[#333333] bg-background"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          </Button>
+        </div>
 
         <div className={cn(
           "p-4 pt-2",
@@ -139,7 +150,8 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
                     width={20}
                     height={20}
                     className="w-full h-full object-cover"
-                    unoptimized
+                    loading="eager"
+                    priority={true}
                   />
                 </div>
                 Harry Potter
@@ -155,7 +167,8 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
                     width={20}
                     height={20}
                     className="w-full h-full object-cover"
-                    unoptimized
+                    loading="eager"
+                    priority={true}
                   />
                 </div>
                 Chota Bheem

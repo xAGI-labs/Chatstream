@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useAuth } from "@clerk/nextjs"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
 import { ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,14 +11,45 @@ import { toast } from "sonner"
 
 interface CharacterSectionProps {
   title: string
-  characters: Character[]
+  category: string // We'll use this to fetch the right category
 }
 
-export function CharacterSection({ title, characters }: CharacterSectionProps) {
+export function CharacterSection({ title, category }: CharacterSectionProps) {
   const { isSignedIn } = useAuth()
   const router = useRouter()
   const { setIsOpen } = useSignupDialog()
   const [isLoading, setIsLoading] = useState(false)
+  const [characters, setCharacters] = useState<Character[]>([])
+  const [isFetching, setIsFetching] = useState(true)
+  
+  // Fetch characters from database on component mount
+  useEffect(() => {
+    async function fetchHomeCharacters() {
+      try {
+        setIsFetching(true)
+        const response = await fetch(`/api/home-characters?category=${category}`)
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch characters")
+        }
+        
+        const data = await response.json()
+        setCharacters(data.map((char: any) => ({
+          id: char.id,
+          name: char.name,
+          description: char.description,
+          imageUrl: char.imageUrl
+        })))
+      } catch (error) {
+        console.error("Error fetching home characters:", error)
+        toast.error("Failed to load characters")
+      } finally {
+        setIsFetching(false)
+      }
+    }
+    
+    fetchHomeCharacters()
+  }, [category])
   
   const handleCharacterClick = async (characterId: string) => {
     if (!isSignedIn) {
@@ -68,15 +99,33 @@ export function CharacterSection({ title, characters }: CharacterSectionProps) {
           See all <ChevronRight className="ml-1 h-3 w-3" />
         </Button>
       </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {characters.map((character) => (
-          <CharacterCard
-            key={character.id}
-            character={character}
-            onClick={() => handleCharacterClick(character.id)}
-            disabled={isLoading}
-          />
-        ))}
+        {isFetching ? (
+          // Show loading placeholders
+          Array(4).fill(0).map((_, i) => (
+            <div 
+              key={i} 
+              className="bg-card border border-border rounded-lg p-3 flex flex-col items-center text-center aspect-[3/4]"
+            >
+              <div className="w-full aspect-square rounded-md bg-gradient-to-b from-gray-700 to-gray-800 animate-pulse mb-3" />
+              <div className="h-4 w-20 bg-gradient-to-r from-gray-700 to-gray-800 animate-pulse rounded" />
+            </div>
+          ))
+        ) : characters.length === 0 ? (
+          <div className="col-span-4 py-8 text-center text-muted-foreground">
+            No characters found in this category.
+          </div>
+        ) : (
+          characters.map((character) => (
+            <CharacterCard
+              key={character.id}
+              character={character}
+              onClick={() => handleCharacterClick(character.id)}
+              disabled={isLoading}
+            />
+          ))
+        )}
       </div>
     </section>
   )

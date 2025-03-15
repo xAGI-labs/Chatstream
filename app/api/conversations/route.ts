@@ -9,15 +9,24 @@ import axios from "axios"
 
 const prisma = new PrismaClient()
 
+// Type definition for combined characters
+type AnyCharacter = {
+  id: string;
+  name: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  category?: string;
+  displayOrder?: number;
+}
+
 // Combine all default characters
 const defaultCharacters = [...popularCharacters, ...educationalCharacters];
 
 export async function POST(req: Request) {
   try {
     const { userId } = await auth()
-    const user = await currentUser()
     
-    if (!userId || !user) {
+    if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })
     }
     
@@ -26,25 +35,6 @@ export async function POST(req: Request) {
     
     if (!characterId) {
       return new NextResponse("Character ID is required", { status: 400 })
-    }
-    
-    // First, ensure the user exists in our database
-    let dbUser = await prisma.user.findUnique({
-      where: { id: userId }
-    })
-    
-    // If user doesn't exist in our DB, create them
-    if (!dbUser) {
-      dbUser = await prisma.user.create({
-        data: {
-          id: userId,
-          email: user.emailAddresses[0]?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          imageUrl: user.imageUrl
-        }
-      })
-      console.log(`Created new user in database: ${userId}`)
     }
     
     // Check if character exists and is accessible by this user
@@ -58,13 +48,23 @@ export async function POST(req: Request) {
       }
     })
     
-    // If character doesn't exist in the database but is in our default characters list
+    // If character doesn't exist in the database but is in our default characters list or HomeCharacters
     if (!character) {
-      // Find in our default characters
-      const defaultCharacter = defaultCharacters.find(c => c.id === characterId);
+      // First, check if it's a HomeCharacter
+      const homeCharacter = await prisma.homeCharacter.findUnique({
+        where: {
+          id: characterId
+        }
+      });
       
-      if (defaultCharacter) {
-        // Create the character in the database as a public character
+      // Get the default character - from either the static list or the HomeCharacter
+      const staticCharacter = defaultCharacters.find(c => c.id === characterId);
+      
+      // Create character if we found either a HomeCharacter or a static character
+      if (homeCharacter || staticCharacter) {
+        // Use whichever character we found
+        const defaultCharacter: AnyCharacter = homeCharacter || staticCharacter!;
+        
         console.log(`Creating default character: ${defaultCharacter.name}`);
         
         // First, make sure we have the system user (we'll use the first admin as the creator)
@@ -87,15 +87,24 @@ export async function POST(req: Request) {
         // Generate instructions for the character using the enhanced method
         let instructions;
         try {
+          // Convert null to undefined to satisfy TypeScript
+          const description: string | undefined = defaultCharacter.description === null 
+            ? undefined
+            : defaultCharacter.description;
+            
           instructions = await generateDetailedInstructions(
             defaultCharacter.name, 
-            defaultCharacter.description || `A character named ${defaultCharacter.name}`
+            description || `A character named ${defaultCharacter.name}`
           );
         } catch (error) {
           // Fallback to basic instructions if AI generation fails
+          const safeDescription: string | undefined = defaultCharacter.description === null 
+            ? undefined 
+            : defaultCharacter.description;
+            
           instructions = generateCharacterInstructions(
             defaultCharacter.name, 
-            defaultCharacter.description
+            safeDescription
           );
           console.error("Error generating detailed instructions, using fallback:", error);
         }
@@ -103,22 +112,30 @@ export async function POST(req: Request) {
         // Generate enhanced avatar prompt
         let avatarPrompt;
         try {
+          // Convert null to undefined for enrichment as well
+          const description: string | undefined = defaultCharacter.description === null 
+            ? undefined 
+            : defaultCharacter.description;
+            
           const enrichment = await enrichCharacterDescription(
             defaultCharacter.name, 
-            defaultCharacter.description
+            description
           );
           avatarPrompt = enrichment.avatarPrompt;
         } catch (error) {
-          avatarPrompt = defaultCharacter.description
-            ? `A portrait of ${defaultCharacter.name}, who is ${defaultCharacter.description}. Detailed, high quality.`
+          // Handle null description for the fallback too
+          const description = defaultCharacter.description || "";
+          avatarPrompt = description
+            ? `A portrait of ${defaultCharacter.name}, who is ${description}. Detailed, high quality.`
             : `A portrait of a character named ${defaultCharacter.name}. Detailed, high quality.`;
           console.error("Error generating avatar prompt, using fallback:", error);
         }
         
-        // Generate avatar using Together API with the enhanced prompt
-        let imageUrl = null;
-        try {
-          if (process.env.TOGETHER_API_KEY) {
+        // Use the pre-generated image if available (from HomeCharacter), otherwise generate one
+        let imageUrl = defaultCharacter.imageUrl;
+        
+        if (!imageUrl && process.env.TOGETHER_API_KEY) {
+          try {
             console.log("Generating avatar for default character with Together API");
             
             const response = await axios.post(
@@ -144,12 +161,12 @@ export async function POST(req: Request) {
               imageUrl = response.data.data[0].url;
               console.log("Generated avatar URL:", imageUrl);
             }
+          } catch (error) {
+            console.error("Error generating avatar for default character:", error);
           }
-        } catch (error) {
-          console.error("Error generating avatar for default character:", error);
         }
         
-        // Fall back to robohash only if Together API fails
+        // Fall back to robohash only if no image is available
         if (!imageUrl) {
           imageUrl = `https://robohash.org/${encodeURIComponent(defaultCharacter.name)}?size=256x256&set=set4`;
         }
@@ -157,7 +174,7 @@ export async function POST(req: Request) {
         // Create the character with Together-generated avatar
         character = await prisma.character.create({
           data: {
-            id: defaultCharacter.id,
+            id: homeCharacter?.id || defaultCharacter.id, // Use the HomeCharacter ID if available
             name: defaultCharacter.name,
             description: defaultCharacter.description || null,
             instructions,
@@ -167,16 +184,19 @@ export async function POST(req: Request) {
           }
         });
       } else {
-        return new NextResponse("Character not found or not accessible", { status: 404 })
+        return new NextResponse("Character not found", { status: 404 })
       }
     }
     
-    // Create a new conversation
+    // Create conversation
     const conversation = await prisma.conversation.create({
       data: {
         userId,
         characterId: character.id,
-        title: `${character.name}`
+        title: `Chat with ${character.name}`
+      },
+      include: {
+        character: true
       }
     })
     

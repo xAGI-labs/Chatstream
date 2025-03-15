@@ -41,7 +41,18 @@ model Character {
   isPublic      Boolean        @default(false) // Whether other users can interact with this character
 }
 
-// Conversation model - represents a chat session between a user and a character
+// HomeCharacter model - represents pre-generated characters for the homepage
+model HomeCharacter {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String   // Pre-generated image URL (required)
+  category    String   // e.g., "popular", "educational", etc.
+  displayOrder Int     // To control the order of display within a category
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Conversation {
   id          String    @id @default(cuid())
   title       String?
@@ -54,7 +65,6 @@ model Conversation {
   messages    Message[] // Messages in this conversation
 }
 
-// Message model - individual messages in a conversation
 model Message {
   id             String       @id @default(cuid())
   content        String       @db.Text
