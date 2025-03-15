@@ -1,14 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from "next/server";
+import { generateAvatar } from '@/lib/avatar';
 
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const name = url.searchParams.get("name") || "Anonymous";
+  const width = parseInt(url.searchParams.get("width") || "256");
+  const height = parseInt(url.searchParams.get("height") || "256");
+  const imageId = url.searchParams.get("imageId");
   
-  const name = searchParams.get('name') || 'Avatar'
-  const width = searchParams.get('width') || '100'
-  const height = searchParams.get('height') || '100'
+  // If there's an imageId parameter, serve from our stored avatars
+  if (imageId) {
+    try {
+      // You can implement logic to fetch from storage like S3/Cloudinary here
+      // For now, we'll just redirect to the stored URL
+      return NextResponse.redirect(`/avatars/${imageId}.png`);
+    } catch (error) {
+      console.error("Error serving stored avatar:", error);
+      // Fall through to fallback
+    }
+  }
   
-  // Redirect to the placeholder service
-  const url = `https://placeholder.sauravalgs.workers.dev/together?prompt=${encodeURIComponent(name)}&width=${width}&height=${height}`
-  
-  return NextResponse.redirect(url)
+  // Default fallback to Robohash
+  const robohashUrl = `https://robohash.org/${encodeURIComponent(name)}?size=${width}x${height}&set=set4`;
+  return NextResponse.redirect(robohashUrl);
 }

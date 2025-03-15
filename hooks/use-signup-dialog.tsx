@@ -1,12 +1,12 @@
-import { create } from "zustand"
+import { create } from 'zustand'
 
-interface SignupDialogStore {
+type SignupDialogState = {
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
 }
 
-export const useSignupDialog = create<SignupDialogStore>((set) => ({
+export const useSignupDialog = create<SignupDialogState>((set) => ({
   isOpen: false,
-  setIsOpen: (isOpen) => set({ isOpen }),
+  setIsOpen: (isOpen) => set({ isOpen })
 }))
 

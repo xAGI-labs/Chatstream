@@ -1,0 +1,155 @@
+import { NextResponse } from "next/server"
+import { auth, currentUser } from "@clerk/nextjs/server"
+import { PrismaClient } from "@prisma/client"
+import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
+import { generateCharacterInstructions } from "@/lib/character"
+
+const prisma = new PrismaClient()
+
+// Combine all default characters
+const defaultCharacters = [...popularCharacters, ...educationalCharacters];
+
+export async function POST(req: Request) {
+  try {
+    const { userId } = await auth()
+    const user = await currentUser()
+    
+    if (!userId || !user) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+    
+    const body = await req.json()
+    const { characterId } = body
+    
+    if (!characterId) {
+      return new NextResponse("Character ID is required", { status: 400 })
+    }
+    
+    // First, ensure the user exists in our database
+    let dbUser = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+    
+    // If user doesn't exist in our DB, create them
+    if (!dbUser) {
+      dbUser = await prisma.user.create({
+        data: {
+          id: userId,
+          email: user.emailAddresses[0]?.emailAddress,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          imageUrl: user.imageUrl
+        }
+      })
+      console.log(`Created new user in database: ${userId}`)
+    }
+    
+    // Check if character exists and is accessible by this user
+    let character = await prisma.character.findFirst({
+      where: {
+        id: characterId,
+        OR: [
+          { creatorId: userId },
+          { isPublic: true }
+        ]
+      }
+    })
+    
+    // If character doesn't exist in the database but is in our default characters list
+    if (!character) {
+      // Find in our default characters
+      const defaultCharacter = defaultCharacters.find(c => c.id === characterId);
+      
+      if (defaultCharacter) {
+        // Create the character in the database as a public character
+        console.log(`Creating default character: ${defaultCharacter.name}`);
+        
+        // First, make sure we have the system user (we'll use the first admin as the creator)
+        let systemUser = await prisma.user.findFirst({
+          where: {
+            id: 'system'
+          }
+        });
+        
+        if (!systemUser) {
+          systemUser = await prisma.user.create({
+            data: {
+              id: 'system',
+              email: 'system@chatstream.ai',
+              firstName: 'System'
+            }
+          });
+        }
+        
+        // Generate instructions for the character
+        const instructions = generateCharacterInstructions(
+          defaultCharacter.name, 
+          defaultCharacter.description
+        );
+        
+        // Create the character
+        character = await prisma.character.create({
+          data: {
+            id: defaultCharacter.id,
+            name: defaultCharacter.name,
+            description: defaultCharacter.description || null,
+            instructions,
+            imageUrl: defaultCharacter.imageUrl,
+            isPublic: true,
+            creatorId: systemUser.id
+          }
+        });
+      } else {
+        return new NextResponse("Character not found or not accessible", { status: 404 })
+      }
+    }
+    
+    // Create a new conversation
+    const conversation = await prisma.conversation.create({
+      data: {
+        userId,
+        characterId: character.id,
+        title: `Chat with ${character.name}`
+      }
+    })
+    
+    return NextResponse.json(conversation)
+  } catch (error) {
+    console.error("[CONVERSATION_POST]", error)
+    return new NextResponse("Internal error", { status: 500 })
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { userId } = await auth()
+    
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+    
+    // Get user's conversations
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        userId
+      },
+      orderBy: {
+        updatedAt: "desc"
+      },
+      include: {
+        character: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true
+          }
+        }
+      }
+    })
+    
+    return NextResponse.json(conversations)
+  } catch (error) {
+    console.error("[CONVERSATIONS_GET]", error)
+    return new NextResponse("Internal error", { status: 500 })
+  }
+}
