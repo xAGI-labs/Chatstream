@@ -39,17 +39,24 @@ export async function POST(req: Request) {
     }
     
     // Generate a custom avatar using Together AI
+    console.log("Attempting to generate avatar for:", name);
+    console.log("Together API Key available:", !!process.env.TOGETHER_API_KEY);
+    
     let avatarUrl = null;
     try {
       if (process.env.TOGETHER_API_KEY) {
+        console.log("Calling generateAvatar function...");
         avatarUrl = await generateAvatar(name, description);
+        console.log("Generated avatar URL:", avatarUrl);
+      } else {
+        console.log("No Together API key found, using default avatar");
       }
     } catch (error) {
-      console.error("Error generating avatar:", error);
+      console.error("Avatar generation failed:", error);
       // Continue with default avatar if generation fails
     }
     
-    // Create the character
+    // Create the character with direct robohash URL if Together API fails
     const character = await prisma.character.create({
       data: {
         name,
@@ -57,8 +64,8 @@ export async function POST(req: Request) {
         instructions,
         isPublic: isPublic || false,
         creatorId: userId,
-        // Use generated avatar if available, otherwise fall back to the API
-        imageUrl: avatarUrl || `/api/avatar?name=${encodeURIComponent(name)}&width=256&height=256`
+        // Use generated avatar if available, otherwise use direct robohash URL
+        imageUrl: avatarUrl || `https://robohash.org/${encodeURIComponent(name)}?size=256x256&set=set4`
       }
     })
     

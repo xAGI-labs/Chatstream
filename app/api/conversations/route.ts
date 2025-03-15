@@ -3,6 +3,7 @@ import { auth, currentUser } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
 import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
 import { generateCharacterInstructions } from "@/lib/character"
+import { generateAvatar } from "@/lib/avatar"
 
 const prisma = new PrismaClient()
 
@@ -87,14 +88,31 @@ export async function POST(req: Request) {
           defaultCharacter.description
         );
         
-        // Create the character
+        // Generate avatar using Together API
+        let imageUrl = null;
+        try {
+          if (process.env.TOGETHER_API_KEY) {
+            console.log("Generating avatar for default character with Together API");
+            imageUrl = await generateAvatar(defaultCharacter.name, defaultCharacter.description);
+            console.log("Generated avatar URL:", imageUrl);
+          }
+        } catch (error) {
+          console.error("Error generating avatar for default character:", error);
+        }
+        
+        // Fall back to robohash only if Together API fails
+        if (!imageUrl) {
+          imageUrl = `https://robohash.org/${encodeURIComponent(defaultCharacter.name)}?size=256x256&set=set4`;
+        }
+        
+        // Create the character with Together-generated avatar
         character = await prisma.character.create({
           data: {
             id: defaultCharacter.id,
             name: defaultCharacter.name,
             description: defaultCharacter.description || null,
             instructions,
-            imageUrl: defaultCharacter.imageUrl,
+            imageUrl,
             isPublic: true,
             creatorId: systemUser.id
           }
@@ -109,7 +127,7 @@ export async function POST(req: Request) {
       data: {
         userId,
         characterId: character.id,
-        title: `Chat with ${character.name}`
+        title: `${character.name}`
       }
     })
     

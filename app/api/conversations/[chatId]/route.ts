@@ -46,6 +46,9 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
     
+    // Debug log to see what imageUrl looks like
+    console.log("Character ImageURL:", conversation.character?.imageUrl);
+    
     // Get messages for this conversation
     const messages = await prisma.message.findMany({
       where: {

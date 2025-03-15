@@ -1,22 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: [
-      'placeholder.sauravalgs.workers.dev',
-      'ui-avatars.com',
-      'api.dicebear.com',
-      'avatars.dicebear.com',
-      'robohash.org'
-    ],
+    // Remove deprecated domains configuration
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'robohash.org',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
+      {
+        protocol: 'https',
         hostname: '**',
-        port: '',
-        pathname: '/**',
       },
     ],
   },
-}
+  // Fix experimental configuration to use the updated property name
+  experimental: {
+    // Replace serverComponentsExternalPackages with serverExternalPackages
+    serverExternalPackages: ['prisma', '@prisma/client'],
+  }
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

@@ -1,5 +1,6 @@
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
 
 export interface Character {
   id: string;
@@ -15,8 +16,20 @@ interface CharacterCardProps {
 }
 
 export function CharacterCard({ character, onClick, disabled }: CharacterCardProps) {
-  const defaultImage = `/api/avatar?name=${encodeURIComponent(character.name)}&width=200&height=200`
-  const imageUrl = character.imageUrl || defaultImage
+  const [imgError, setImgError] = useState(false);
+  
+  // Use robohash as last-resort fallback only
+  const fallbackImage = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+  
+  // For the image URL:
+  // 1. First try the stored imageUrl from the database (Together AI generated)
+  // 2. If that fails, use the fallback
+  let imageUrl = character.imageUrl || fallbackImage;
+  
+  // Reset error state when character changes
+  useEffect(() => {
+    setImgError(false);
+  }, [character.id]);
   
   return (
     <button
@@ -31,10 +44,11 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
     >
       <div className="relative w-full aspect-square rounded-md overflow-hidden mb-3">
         <Image
-          src={imageUrl}
+          src={imgError ? fallbackImage : imageUrl}
           alt={character.name}
           fill
           className="object-cover"
+          onError={() => setImgError(true)}
         />
       </div>
       <h3 className="font-medium text-sm">{character.name}</h3>

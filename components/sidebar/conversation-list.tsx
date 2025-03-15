@@ -87,6 +87,11 @@ export function ConversationList() {
       {conversations.slice(0, 5).map((conversation) => {
         const isActive = pathname === `/chat/${conversation.id}`
         
+        // Just use the imageUrl directly - no need to convert it
+        // It's either a Together-generated image path or already a fallback
+        const imageUrl = conversation.character.imageUrl || 
+          `https://robohash.org/${encodeURIComponent(conversation.character.name)}?size=20x20&set=set4`;
+        
         return (
           <Link
             key={conversation.id}
@@ -96,21 +101,18 @@ export function ConversationList() {
               isActive && "bg-[#1a1a1a] text-white"
             )}
           >
-            {conversation.character.imageUrl ? (
-              <div className="w-5 h-5 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                <Image
-                  src={conversation.character.imageUrl}
-                  alt={conversation.character.name}
-                  width={20}
-                  height={20}
-                  className="object-cover"
-                />
-              </div>
-            ) : (
-              <MessageSquare className="w-4 h-4 mr-2" />
-            )}
+            <div className="w-5 h-5 rounded-full overflow-hidden mr-2 flex-shrink-0">
+              <Image
+                src={imageUrl}
+                alt={conversation.character.name}
+                width={20}
+                height={20}
+                className="object-cover"
+                unoptimized
+              />
+            </div>
             <span className="truncate">
-              {conversation.title || `Chat with ${conversation.character.name}`}
+              {conversation.title || `${conversation.character.name}`}
             </span>
           </Link>
         )

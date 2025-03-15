@@ -25,48 +25,65 @@ export async function generateAvatar(
   description?: string
 ): Promise<string | null> {
   try {
-    const prompt = `A digital avatar portrait of a character named ${name}${
-      description ? ` who is ${description}` : ''
-    }. High quality, detailed, professional illustration style.`;
+    // Create a prompt that includes character details
+    const prompt = description
+      ? `A portrait of ${name}, who is ${description}. Detailed, high quality.`
+      : `A portrait of a character named ${name}. Detailed, high quality.`;
     
+    console.log("Generating avatar for:", name);
+    console.log("Using API key:", process.env.TOGETHER_API_KEY?.substring(0, 5) + "...");
+    
+    // Use the Together API endpoint from the curl example
     const response = await axios.post(
-      'https://api.together.xyz/v1/images/generations',
+      "https://api.together.xyz/v1/images/generations",
       {
-        model: 'black-forest-labs/FLUX.1-dev',
-        prompt,
+        model: "black-forest-labs/FLUX.1-dev",
+        prompt: prompt,
         width: 256,
         height: 256,
         steps: 28,
         n: 1,
-        response_format: 'b64_json'
+        response_format: "b64_json"
       },
       {
         headers: {
-          'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
+          "Content-Type": "application/json"
         }
       }
     );
     
-    if (!response.data || !response.data.data || !response.data.data[0] || !response.data.data[0].b64_json) {
-      throw new Error('Invalid response from Together API');
+    console.log("Response status:", response.status);
+    
+    // Check if we got a valid response with an image
+    if (
+      !response.data ||
+      !response.data.data ||
+      !response.data.data[0] ||
+      !response.data.data[0].b64_json
+    ) {
+      console.error("Invalid API response:", JSON.stringify(response.data));
+      throw new Error("Invalid response from Together AI API");
     }
     
-    // Get the base64 encoded image
-    const b64Image = response.data.data[0].b64_json;
+    // Get the base64 image data
+    const imageData = response.data.data[0].b64_json;
     
-    // Create a unique ID for the image based on timestamp and name
-    const imageId = `${Date.now()}-${name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`;
+    // Create a unique filename
+    const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const filename = `${Date.now()}-${sanitizedName}.png`;
+    const filePath = path.join(AVATAR_DIR, filename);
     
-    // Write the image to the file system
-    const buffer = Buffer.from(b64Image, 'base64');
-    const imagePath = path.join(AVATAR_DIR, `${imageId}.png`);
-    fs.writeFileSync(imagePath, buffer);
+    // Save the image to the file system
+    const buffer = Buffer.from(imageData, 'base64');
+    fs.writeFileSync(filePath, buffer);
     
-    // Return the URL to access the image
-    return `/avatars/${imageId}.png`;
+    console.log("Avatar generated successfully:", filename);
+    
+    // Return the URL path to the image
+    return `/avatars/${filename}`;
   } catch (error) {
-    console.error('Error generating avatar:', error);
+    console.error("Error generating avatar with Together API:", error);
     return null;
   }
 }
