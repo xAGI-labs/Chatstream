@@ -20,7 +20,6 @@ const nextConfig = {
   // Fix experimental configuration to use the updated property name
   experimental: {
     // Replace serverComponentsExternalPackages with serverExternalPackages
-    serverExternalPackages: ['prisma', '@prisma/client'],
   },
   // Disable TypeScript type checking during builds
   typescript: {
