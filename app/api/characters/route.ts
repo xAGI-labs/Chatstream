@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
 import axios from 'axios'
+import { enrichCharacterDescription, generateDetailedInstructions } from "@/lib/character-enrichment"
 
 const prisma = new PrismaClient()
 
@@ -15,10 +16,10 @@ export async function POST(req: Request) {
     }
     
     const body = await req.json()
-    const { name, description, instructions, isPublic } = body
+    let { name, description, instructions, isPublic } = body
     
-    if (!name || !instructions) {
-      return new NextResponse("Name and instructions are required", { status: 400 })
+    if (!name) {
+      return new NextResponse("Name is required", { status: 400 })
     }
     
     // Check if the user exists in our database, if not create them
@@ -38,7 +39,24 @@ export async function POST(req: Request) {
       })
     }
     
-    // Generate a custom avatar using Together AI
+    // Enrich character information with AI
+    const enrichmentResult = await enrichCharacterDescription(name, description);
+    
+    // If flagged as inappropriate content, reject the creation
+    if (!enrichmentResult.isValidCharacter) {
+      return new NextResponse("Character contains inappropriate content", { status: 400 });
+    }
+    
+    // Use enhanced description if available
+    description = enrichmentResult.enhancedDescription;
+    
+    // Generate detailed instructions if not provided or minimal
+    if (!instructions || instructions.length < 100) {
+      console.log("Generating detailed instructions for character...");
+      instructions = await generateDetailedInstructions(name, description);
+    }
+    
+    // Generate a custom avatar using Together AI with the enhanced prompt
     console.log("Attempting to generate avatar for:", name);
     
     let avatarUrl = null;
@@ -46,10 +64,8 @@ export async function POST(req: Request) {
       if (process.env.TOGETHER_API_KEY) {
         console.log("Calling Together API for avatar generation...");
         
-        // Generate avatar using Together AI directly
-        const prompt = description
-          ? `A portrait of ${name}, who is ${description}. Detailed, high quality.`
-          : `A portrait of a character named ${name}. Detailed, high quality.`;
+        // Use the AI-generated avatar prompt for better results
+        const prompt = enrichmentResult.avatarPrompt;
         
         const response = await axios.post(
           "https://api.together.xyz/v1/images/generations",
@@ -75,7 +91,7 @@ export async function POST(req: Request) {
           console.log("Generated avatar URL from Together API:", avatarUrl);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Avatar generation failed:", error);
       // Continue with default avatar if generation fails
     }
@@ -94,7 +110,7 @@ export async function POST(req: Request) {
     })
     
     return NextResponse.json(character)
-  } catch (error) {
+  } catch (error: any) {
     console.error("[CHARACTER_POST]", error)
     return new NextResponse("Internal error", { status: 500 })
   }

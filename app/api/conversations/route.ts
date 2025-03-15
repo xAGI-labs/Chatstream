@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client"
 import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
 import { generateCharacterInstructions } from "@/lib/character"
 import { generateAvatar } from "@/lib/avatar"
+import { enrichCharacterDescription, generateDetailedInstructions } from "@/lib/character-enrichment"
 import axios from "axios"
 
 const prisma = new PrismaClient()
@@ -83,32 +84,53 @@ export async function POST(req: Request) {
           });
         }
         
-        // Generate instructions for the character
-        const instructions = generateCharacterInstructions(
-          defaultCharacter.name, 
-          defaultCharacter.description
-        );
+        // Generate instructions for the character using the enhanced method
+        let instructions;
+        try {
+          instructions = await generateDetailedInstructions(
+            defaultCharacter.name, 
+            defaultCharacter.description || `A character named ${defaultCharacter.name}`
+          );
+        } catch (error) {
+          // Fallback to basic instructions if AI generation fails
+          instructions = generateCharacterInstructions(
+            defaultCharacter.name, 
+            defaultCharacter.description
+          );
+          console.error("Error generating detailed instructions, using fallback:", error);
+        }
         
-        // Generate avatar using Together API
+        // Generate enhanced avatar prompt
+        let avatarPrompt;
+        try {
+          const enrichment = await enrichCharacterDescription(
+            defaultCharacter.name, 
+            defaultCharacter.description
+          );
+          avatarPrompt = enrichment.avatarPrompt;
+        } catch (error) {
+          avatarPrompt = defaultCharacter.description
+            ? `A portrait of ${defaultCharacter.name}, who is ${defaultCharacter.description}. Detailed, high quality.`
+            : `A portrait of a character named ${defaultCharacter.name}. Detailed, high quality.`;
+          console.error("Error generating avatar prompt, using fallback:", error);
+        }
+        
+        // Generate avatar using Together API with the enhanced prompt
         let imageUrl = null;
         try {
           if (process.env.TOGETHER_API_KEY) {
             console.log("Generating avatar for default character with Together API");
             
-            const prompt = defaultCharacter.description
-              ? `A portrait of ${defaultCharacter.name}, who is ${defaultCharacter.description}. Detailed, high quality.`
-              : `A portrait of a character named ${defaultCharacter.name}. Detailed, high quality.`;
-            
             const response = await axios.post(
               "https://api.together.xyz/v1/images/generations",
               {
                 model: "black-forest-labs/FLUX.1-dev",
-                prompt,
+                prompt: avatarPrompt,
                 width: 256,
                 height: 256,
                 steps: 28,
                 n: 1,
-                response_format: "url" // Get URL directly instead of base64
+                response_format: "url"
               },
               {
                 headers: {
