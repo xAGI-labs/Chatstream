@@ -7,6 +7,7 @@ const nextConfig = {
       'img.clerk.com',
       'together.xyz',
       'api.together.xyz',
+      'api.together.ai',
     ],
     unoptimized: process.env.NODE_ENV === 'production',
   },

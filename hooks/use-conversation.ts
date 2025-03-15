@@ -48,11 +48,11 @@ export function useConversation(chatId: string) {
             router.push("/")
             return
           }
-          throw new Error("Failed to fetch conversation")
+          throw new Error(`Failed to fetch conversation: ${response.status} ${response.statusText}`)
         }
         
         const data = await response.json()
-        setConversation(data.conversation)
+        setConversation(data)
         setMessages(data.messages)
       } catch (error) {
         console.error("Error fetching conversation:", error)
@@ -64,7 +64,9 @@ export function useConversation(chatId: string) {
       }
     }
     
-    fetchConversation()
+    if (chatId && userId) {
+      fetchConversation()
+    }
   }, [chatId, userId, router])
   
   const sendMessage = async (content: string) => {
@@ -89,7 +91,7 @@ export function useConversation(chatId: string) {
       })
       
       if (!response.ok) {
-        throw new Error("Failed to send message")
+        throw new Error(`Failed to send message: ${response.status} ${response.statusText}`)
       }
       
       const data = await response.json()

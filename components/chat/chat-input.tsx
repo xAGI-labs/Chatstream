@@ -8,9 +8,11 @@ import { Send } from "lucide-react"
 interface ChatInputProps {
   onSend: (content: string) => Promise<void>;
   disabled?: boolean;
+  isWaiting?: boolean;
+  setIsWaiting?: (waiting: boolean) => void;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, isWaiting, setIsWaiting }: ChatInputProps) {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -21,10 +23,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     
     try {
       setIsSubmitting(true)
+      if (setIsWaiting) setIsWaiting(true)
       await onSend(message)
       setMessage("")
     } finally {
       setIsSubmitting(false)
+      // We don't set isWaiting to false here because the parent component
+      // will handle that when the AI response is received
     }
   }
 

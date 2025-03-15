@@ -13,6 +13,7 @@ export default function ChatPage() {
   const { chatId } = useParams()
   const { userId } = useAuth()
   const { conversation, messages, sendMessage, loading } = useConversation(chatId as string)
+  const [isWaiting, setIsWaiting] = useState(false)
   
   if (!userId) {
     return <div className="flex h-screen items-center justify-center">Please sign in to continue</div>
@@ -37,13 +38,20 @@ export default function ChatPage() {
           <ChatMessages 
             messages={messages} 
             loading={loading}
+            isWaiting={isWaiting}
+            character={conversation?.character}
           />
         </div>
         
         {/* Chat Input */}
         <ChatInput 
-          onSend={sendMessage}
+          onSend={async (content) => {
+            await sendMessage(content)
+            setIsWaiting(false)
+          }}
           disabled={loading} 
+          isWaiting={isWaiting}
+          setIsWaiting={setIsWaiting}
         />
       </div>
     </div>
