@@ -85,6 +85,9 @@ export function MobileNavigation({
                     <span className="text-sm font-medium text-white">chatstream.ai</span>
                   </Link>
                   <SheetClose asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
                   </SheetClose>
                 </div>
                 <SheetTitle className="text-left mt-6 text-sm font-medium text-gray-400">Navigation</SheetTitle>
