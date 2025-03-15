@@ -10,6 +10,7 @@ import { HeroSection } from "@/components/hero-section"
 import { CharacterSection } from "@/components/characters/character-section"
 import { CreateCharacterSection } from "@/components/create-character-section"
 import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
+import { preloadDefaultAvatars } from "@/lib/preload-avatars"
 
 export default function Home() {
   const { isOpen, setIsOpen } = useSignupDialog()
@@ -21,6 +22,16 @@ export default function Home() {
       setIsOpen(true)
     }
   }, [isLoaded, isSignedIn, setIsOpen])
+  
+  // Preload avatars for default characters on initial load
+  useEffect(() => {
+    // Using a timeout to not block the main thread during initial rendering
+    const timeoutId = setTimeout(() => {
+      preloadDefaultAvatars().catch(console.error);
+    }, 2000);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   return (
     <div className="flex h-screen bg-[#111111]">
@@ -49,9 +60,9 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      {/* Signup Dialog */}
-      {!isSignedIn && <SignupDialog open={isOpen} onOpenChange={setIsOpen} />}
+      
+      {/* Sign-up Dialog */}
+      <SignupDialog open={isOpen} onOpenChange={setIsOpen} />
     </div>
   )
 }

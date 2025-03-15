@@ -54,7 +54,7 @@ export async function POST(req: Request) {
     
     const avatarUrl = response.data.data[0].url;
     return NextResponse.json({ avatarUrl });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in generate-avatar route:", error);
     return new NextResponse("Internal server error", { status: 500 });
   }

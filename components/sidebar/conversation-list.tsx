@@ -19,7 +19,11 @@ interface Conversation {
   updatedAt: string;
 }
 
-export function ConversationList() {
+interface ConversationListProps {
+  isCollapsed?: boolean;
+}
+
+export function ConversationList({ isCollapsed = false }: ConversationListProps) {
   const { isSignedIn } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,11 +63,14 @@ export function ConversationList() {
   if (loading) {
     return (
       <div className="px-3 py-2">
-        <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>
+        {!isCollapsed && <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>}
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center space-x-2 px-2 py-1.5 mb-1">
+          <div key={i} className={cn(
+            "flex items-center space-x-2 py-1.5 mb-1",
+            isCollapsed ? "justify-center px-0" : "px-2"
+          )}>
             <Skeleton className="h-5 w-5 rounded-full" />
-            <Skeleton className="h-4 w-full" />
+            {!isCollapsed && <Skeleton className="h-4 w-full" />}
           </div>
         ))}
       </div>
@@ -73,17 +80,21 @@ export function ConversationList() {
   if (conversations.length === 0) {
     return (
       <div className="px-3 py-2">
-        <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>
-        <div className="px-2 py-2 text-xs text-gray-400 text-center">
-          No conversations yet. Start chatting with a character!
-        </div>
+        {!isCollapsed && (
+          <>
+            <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>
+            <div className="px-2 py-2 text-xs text-gray-400 text-center">
+              No conversations yet. Start chatting with a character!
+            </div>
+          </>
+        )}
       </div>
     )
   }
   
   return (
     <div className="px-3 py-2">
-      <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>
+      {!isCollapsed && <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Recent Chats</h3>}
       {conversations.slice(0, 5).map((conversation) => {
         const isActive = pathname === `/chat/${conversation.id}`
         
@@ -97,11 +108,13 @@ export function ConversationList() {
             key={conversation.id}
             href={`/chat/${conversation.id}`}
             className={cn(
-              "flex items-center px-2 py-1.5 rounded-md text-xs mb-1 hover:bg-[#1a1a1a] transition-colors",
+              "flex items-center py-1.5 rounded-md text-xs mb-1 hover:bg-[#1a1a1a] transition-colors",
+              isCollapsed ? "justify-center px-1" : "px-2",
               isActive && "bg-[#1a1a1a] text-white"
             )}
+            title={isCollapsed ? conversation.character.name : undefined}
           >
-            <div className="w-5 h-5 rounded-full overflow-hidden mr-2 flex-shrink-0">
+            <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
               <Image
                 src={imageUrl}
                 alt={conversation.character.name}
@@ -111,9 +124,11 @@ export function ConversationList() {
                 unoptimized
               />
             </div>
-            <span className="truncate">
-              {conversation.title || `${conversation.character.name}`}
-            </span>
+            {!isCollapsed && (
+              <span className="truncate ml-2">
+                {conversation.title || `${conversation.character.name}`}
+              </span>
+            )}
           </Link>
         )
       })}
