@@ -15,11 +15,6 @@ interface SidebarProps {
   setIsOpen?: (open: boolean) => void;
 }
 
-// Helper function to generate avatar URLs
-const getAvatarUrl = (name: string, size = 100) => {
-  return `https://robohash.org/${encodeURIComponent(name)}?size=${size}x${size}&set=set4`
-}
-
 export function Sidebar({ setIsOpen }: SidebarProps) {
   const { isSignedIn } = useAuth()
   const { user } = useUser()
@@ -37,6 +32,10 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   
   // Get user's first name or username for display
   const displayName = user?.firstName || user?.username || "Guest"
+  
+  // Pre-define avatar URLs directly to avoid unnecessary API calls
+  const harryPotterAvatar = `/api/avatar?name=Harry%20Potter&width=20&height=20`
+  const chotaBheemAvatar = `/api/avatar?name=Chota%20Bheem&width=20&height=20`
 
   return (
     <>
@@ -95,11 +94,12 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
             >
               <div className="w-5 h-5 rounded-full overflow-hidden mr-2">
                 <Image
-                  src={getAvatarUrl("Harry Potter", 20)}
+                  src={harryPotterAvatar}
                   alt="Harry Potter"
                   width={20}
                   height={20}
                   className="w-full h-full object-cover"
+                  unoptimized
                 />
               </div>
               Harry Potter
@@ -110,11 +110,12 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
             >
               <div className="w-5 h-5 rounded-full overflow-hidden mr-2">
                 <Image
-                  src={getAvatarUrl("Chota Bheem", 20)}
+                  src={chotaBheemAvatar}
                   alt="Chota Bheem"
                   width={20}
                   height={20}
                   className="w-full h-full object-cover"
+                  unoptimized
                 />
               </div>
               Chota Bheem

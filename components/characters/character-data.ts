@@ -2,21 +2,15 @@ export interface Character {
   id: string;
   name: string;
   description?: string;
-  imageUrl?: string;  // This accepts string or undefined, but not null
+  imageUrl?: string;
 }
 
-// Helper function to generate avatar URLs that was missing
-const getAvatarUrl = (name: string, size = 256) => {
-  return `https://robohash.org/${encodeURIComponent(name)}?size=${size}x${size}&set=set4`;
-};
-
-// Characters will use the Together API via our avatar generation endpoint
+// Remove initial imageUrl values to ensure Together API is used for generation
 export const popularCharacters: Character[] = [
   {
     id: "harry-potter",
     name: "Harry Potter",
     description: "The Boy Who Lived, from Hogwarts School of Witchcraft and Wizardry",
-    // For pre-defined characters, we'll use undefined to trigger generation when first accessed
     imageUrl: undefined
   },
   {

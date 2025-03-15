@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client"
 import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
 import { generateCharacterInstructions } from "@/lib/character"
 import { generateAvatar } from "@/lib/avatar"
+import axios from "axios"
 
 const prisma = new PrismaClient()
 
@@ -93,8 +94,34 @@ export async function POST(req: Request) {
         try {
           if (process.env.TOGETHER_API_KEY) {
             console.log("Generating avatar for default character with Together API");
-            imageUrl = await generateAvatar(defaultCharacter.name, defaultCharacter.description);
-            console.log("Generated avatar URL:", imageUrl);
+            
+            const prompt = defaultCharacter.description
+              ? `A portrait of ${defaultCharacter.name}, who is ${defaultCharacter.description}. Detailed, high quality.`
+              : `A portrait of a character named ${defaultCharacter.name}. Detailed, high quality.`;
+            
+            const response = await axios.post(
+              "https://api.together.xyz/v1/images/generations",
+              {
+                model: "black-forest-labs/FLUX.1-dev",
+                prompt,
+                width: 256,
+                height: 256,
+                steps: 28,
+                n: 1,
+                response_format: "url" // Get URL directly instead of base64
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
+                  "Content-Type": "application/json"
+                }
+              }
+            );
+            
+            if (response.data?.data?.[0]?.url) {
+              imageUrl = response.data.data[0].url;
+              console.log("Generated avatar URL:", imageUrl);
+            }
           }
         } catch (error) {
           console.error("Error generating avatar for default character:", error);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
-import { generateAvatar } from '@/lib/avatar';
+import axios from 'axios'
 
 const prisma = new PrismaClient()
 
@@ -40,16 +40,40 @@ export async function POST(req: Request) {
     
     // Generate a custom avatar using Together AI
     console.log("Attempting to generate avatar for:", name);
-    console.log("Together API Key available:", !!process.env.TOGETHER_API_KEY);
     
     let avatarUrl = null;
     try {
       if (process.env.TOGETHER_API_KEY) {
-        console.log("Calling generateAvatar function...");
-        avatarUrl = await generateAvatar(name, description);
-        console.log("Generated avatar URL:", avatarUrl);
-      } else {
-        console.log("No Together API key found, using default avatar");
+        console.log("Calling Together API for avatar generation...");
+        
+        // Generate avatar using Together AI directly
+        const prompt = description
+          ? `A portrait of ${name}, who is ${description}. Detailed, high quality.`
+          : `A portrait of a character named ${name}. Detailed, high quality.`;
+        
+        const response = await axios.post(
+          "https://api.together.xyz/v1/images/generations",
+          {
+            model: "black-forest-labs/FLUX.1-dev",
+            prompt,
+            width: 256,
+            height: 256,
+            steps: 28,
+            n: 1,
+            response_format: "url" // Get URL directly instead of base64
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
+              "Content-Type": "application/json"
+            }
+          }
+        );
+        
+        if (response.data?.data?.[0]?.url) {
+          avatarUrl = response.data.data[0].url;
+          console.log("Generated avatar URL from Together API:", avatarUrl);
+        }
       }
     } catch (error) {
       console.error("Avatar generation failed:", error);
