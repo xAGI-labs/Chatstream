@@ -1,4 +1,5 @@
 "use client"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { X, Video, Sparkles } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -18,6 +19,23 @@ interface SignupDialogProps {
 
 export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) {
   const { isSignedIn } = useAuth()
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    // Initial check
+    checkIsMobile()
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIsMobile)
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
   
   // If user is already signed in, close the dialog
   if (isSignedIn && open) {
@@ -26,9 +44,12 @@ export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] bg-[#111111] text-white p-0 border border-[#222222] rounded-xl overflow-hidden">
+      <DialogContent className={`
+        bg-[#111111] text-white p-0 border border-[#222222] rounded-xl overflow-hidden 
+        ${isMobile ? 'w-full h-full max-h-[100vh] max-w-full rounded-none border-0' : 'sm:max-w-[800px]'}
+      `}>
         <DialogTitle className="sr-only">Join Chatstream</DialogTitle>
-        <div className="relative flex flex-col md:flex-row">
+        <div className={`relative flex ${isMobile ? 'flex-col' : 'flex-col md:flex-row'}`}>
           {/* Close button */}
           <button
             onClick={() => onOpenChange(false)}
@@ -37,9 +58,15 @@ export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) 
             <X className="h-4 w-4" />
           </button>
 
-          {/* Phone mockup with characters */}
-          <div className="bg-gradient-to-br from-[#1a1a1a] to-[#111111] p-6 flex items-center justify-center md:w-1/2">
-            <div className="relative bg-black rounded-[32px] w-[220px] h-[420px] overflow-hidden border-[3px] border-[#222222] shadow-lg">
+          {/* Phone mockup with characters - Hidden on very small screens */}
+          <div className={`
+            bg-gradient-to-br from-[#1a1a1a] to-[#111111] p-6 flex items-center justify-center
+            ${isMobile ? 'py-4 hidden sm:flex' : 'md:w-1/2'}
+          `}>
+            <div className={`
+              relative bg-black rounded-[32px] overflow-hidden border-[3px] border-[#222222] shadow-lg
+              ${isMobile ? 'w-[180px] h-[340px]' : 'w-[220px] h-[420px]'}
+            `}>
               <div className="absolute top-0 left-0 right-0 h-8 bg-black flex justify-center">
                 <div className="w-24 h-6 bg-black rounded-b-xl"></div>
               </div>
@@ -90,7 +117,23 @@ export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) 
           </div>
 
           {/* Signup content */}
-          <div className="p-8 md:w-1/2 flex flex-col justify-center">
+          <div className={`
+            flex flex-col justify-center
+            ${isMobile ? 'p-4 pt-12' : 'p-8 md:w-1/2'}
+          `}>
+            {/* Mobile app logo - only shown on very small screens */}
+            {isMobile && (
+              <div className="mb-4 flex justify-center items-center">
+                <Image 
+                  src="/logo.png" 
+                  alt="Chatstream Logo" 
+                  width={120} 
+                  height={28} 
+                  className="h-8 w-auto" 
+                />
+              </div>
+            )}
+            
             <div className="mb-6 text-center">
               <h2 className="text-2xl font-bold mb-2 text-white flex items-center justify-center">
                 Join Chatstream <Sparkles className="ml-2 h-4 w-4 text-yellow-400" />
@@ -114,13 +157,16 @@ export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) 
                     footer: {
                       backgroundColor: "transparent",
                       borderTop: "none",
-                      fontSize: "0.875rem",
+                      fontSize: isMobile ? "0.75rem" : "0.875rem",
                       textAlign: "center"
                     },
-                    socialButtons: "gap-2",
-                    socialButtonsProviderIcon: "w-5 h-5",
-                    socialButtonsBlockButton: "bg-[#222222] hover:bg-[#333333] border border-[#333333] text-white h-11 rounded-md",
-                    socialButtonsBlockButtonText: "font-medium text-sm",
+                    socialButtons: isMobile ? "grid grid-cols-2 gap-2" : "gap-2",
+                    socialButtonsProviderIcon: isMobile ? "w-4 h-4" : "w-5 h-5",
+                    socialButtonsBlockButton: `
+                      bg-[#222222] hover:bg-[#333333] border border-[#333333] text-white rounded-md
+                      ${isMobile ? 'h-10 text-xs' : 'h-11'}
+                    `,
+                    socialButtonsBlockButtonText: `font-medium ${isMobile ? 'text-xs' : 'text-sm'}`,
                     dividerLine: "bg-[#333333]",
                     dividerText: "text-gray-400",
                     formButtonPrimary: "bg-blue-600 hover:bg-blue-700 rounded-md font-medium",
@@ -150,6 +196,13 @@ export default function SignupDialog({ open, onOpenChange }: SignupDialogProps) 
                 }}
               />
             </div>
+            
+            {/* Footer notes - simplified for mobile */}
+            {isMobile && (
+              <div className="mt-4 text-center text-xs text-gray-500">
+                <p>By signing up, you agree to our Terms and Privacy Policy</p>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

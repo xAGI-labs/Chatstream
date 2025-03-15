@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
 import { CreateCharacterDialog } from "@/components/create-character-dialog"
 import { ConversationList } from "./conversation-list"
+import { MobileNavigation } from "./mobile-navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 
@@ -24,19 +25,38 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   const { setIsOpen: setSignupOpen } = useSignupDialog()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    // Initial check
+    checkIsMobile()
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIsMobile)
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
   
   // Load collapsed state from localStorage on component mount
   useEffect(() => {
     const savedCollapsedState = localStorage.getItem('sidebarCollapsed')
-    if (savedCollapsedState !== null) {
+    if (savedCollapsedState !== null && !isMobile) {
       setIsCollapsed(JSON.parse(savedCollapsedState))
     }
-  }, [])
+  }, [isMobile])
   
   // Save collapsed state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed))
-  }, [isCollapsed])
+    if (!isMobile) {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(isCollapsed))
+    }
+  }, [isCollapsed, isMobile])
   
   // Check if we're in a chat route
   const isChatRoute = pathname?.startsWith('/chat')
@@ -57,6 +77,20 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   const harryPotterAvatar = `/api/avatar?name=Harry%20Potter&width=20&height=20&cache=true&t=1`
   const chotaBheemAvatar = `/api/avatar?name=Chota%20Bheem&width=20&height=20&cache=true&t=1`
 
+  // Render mobile navigation on small screens
+  if (isMobile) {
+    return (
+      <MobileNavigation 
+        setSignupOpen={setSignupOpen}
+        setCreateDialogOpen={setIsCreateDialogOpen}
+        isCreateDialogOpen={isCreateDialogOpen}
+        isSignedIn={!!isSignedIn} // Convert to boolean with double negation
+        displayName={displayName}
+      />
+    )
+  }
+
+  // Desktop sidebar view
   return (
     <>
       <aside className={cn(
