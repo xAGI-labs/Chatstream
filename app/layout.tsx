@@ -8,7 +8,7 @@ import "../styles/clerk.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export const metadata: Metadata = {
-  title: "Chatstream | AI Characters",
+  title: "Charstream | AI Characters",
   description: "Chat with AI characters and create your own",
 }
 

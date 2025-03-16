@@ -110,7 +110,7 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
             className="h-6 w-auto"
             priority
           />
-          {!isCollapsed && <span className="text-sm font-medium text-white">chatstream.ai</span>}
+          {!isCollapsed && <span className="text-sm font-medium text-white">charstream.xyz</span>}
         </Link>
 
         {/* Collapse Button - Visible on all routes */}
