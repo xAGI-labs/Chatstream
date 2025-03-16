@@ -3,22 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: [
-      'api.together.ai',      // Allow Together AI domain
-      'together-ai-bfl-images-prod.s3.us-west-2.amazonaws.com', // Allow direct S3 access
-      'robohash.org',         // Keep robohash as fallback if needed
-      'avatars.githubusercontent.com',  // Common for profile pictures
-      'img.clerk.com',        // For Clerk user images
-      'images.clerk.dev',     // For Clerk user images
-      'cloudflare-ipfs.com',  // Common CDN for images
+      'robohash.org',
+      'img.clerk.com',
+      'together.xyz',
+      'api.together.xyz',
+      'api.together.ai',
     ],
-    minimumCacheTTL: 60 * 60 * 24, // Cache images for 24 hours
-    // Ensure there's sufficient buffer for large URL query strings
-    formats: ['image/avif', 'image/webp'],
-    // Increase limit for image size
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    unoptimized: process.env.NODE_ENV === 'production',
   },
   // Enable standalone output for Nixpacks deployment
   output: 'standalone',
@@ -48,11 +39,7 @@ const nextConfig = {
   experimental: {
     // Enable Nixpacks compatibility
     appDir: true,
-  },
-  // Increase serverless function timeout for generating images if needed
-  serverRuntimeConfig: {
-    maxDuration: 60, // 60 seconds
-  },
+  }
 };
 
 module.exports = nextConfig;

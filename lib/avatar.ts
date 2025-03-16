@@ -50,7 +50,7 @@ export async function generateAvatar(
       "https://api.together.xyz/v1/images/generations",
       {
         model: "black-forest-labs/FLUX.1-dev",
-        prompt: prompt,
+        prompt,
         width: 256,
         height: 256,
         steps: 28,
@@ -73,7 +73,6 @@ export async function generateAvatar(
       throw new Error("Invalid response from Together API");
     }
     
-    // Store the full URL unchanged - this is the pre-signed URL
     const imageUrl = response.data.data[0].url;
     console.log("Avatar generated successfully:", imageUrl);
     

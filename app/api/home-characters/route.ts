@@ -113,13 +113,15 @@ export async function GET(req: Request) {
       }
     });
     
-    // Process characters to ensure URLs are production-ready
-    // No transformation, just return exactly as stored in DB
-    // This ensures that the pre-signed URLs from Together AI are passed unmodified
-    
+    // IMPORTANT: Do NOT modify the imageUrl - return exactly what's in the database
+    // Log data for debugging
     console.log(`HOME_CHARACTERS: Returning ${characters.length} characters for ${category}`);
+    console.table(characters.map(c => ({
+      name: c.name,
+      hasImage: !!(c.imageUrl && c.imageUrl !== DEFAULT_IMAGE_URL),
+      imageUrl: c.imageUrl?.substring(0, 30) + (c.imageUrl?.length > 30 ? '...' : '')
+    })));
     
-    // Return the characters with their original imageUrls
     return NextResponse.json(characters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
