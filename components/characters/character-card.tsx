@@ -1,6 +1,7 @@
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
+import { useAvatarCache } from "@/hooks/use-avatar-cache"
 
 export interface Character {
   id: string;
@@ -20,23 +21,31 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const { getAvatarUrl } = useAvatarCache();
   
   // Use robohash as last-resort fallback only
-  const fallbackImage = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+  const fallbackImage = getAvatarUrl(character.name || `character-${character.id || 'unknown'}`, 200);
   
-  // Load the avatar from our API with retries
+  // Load the avatar with consistent caching
   useEffect(() => {
     setImgError(false);
     setIsLoading(true);
     
-    // If we already have an imageUrl, use it directly
+    // Important: Debug log to troubleshoot avatar issues
+    console.log(`CharacterCard: Loading avatar for ${character.name}`, { 
+      hasImageUrl: !!character.imageUrl,
+      imageUrl: character.imageUrl
+    });
+    
+    // If we already have an imageUrl from the database, use it directly
     if (character.imageUrl) {
+      console.log(`CharacterCard: Using stored imageUrl for ${character.name}`);
       setAvatarUrl(character.imageUrl);
       setIsLoading(false);
       return;
     }
     
-    // Build URL with exponential backoff based on retry count
+    // Only fetch from avatar API if no imageUrl is stored in the database
     const fetchAvatar = async () => {
       try {
         // Add a delay for retries to avoid hammering the API
@@ -45,21 +54,21 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
           await new Promise(resolve => setTimeout(resolve, delay));
         }
         
-        // Construct URL with cache-busting parameter for retries
-        const url = `/api/avatar?name=${encodeURIComponent(character.name)}${
-          character.description ? `&description=${encodeURIComponent(character.description)}` : ''
-        }&width=200&height=200${retryCount > 0 ? `&t=${Date.now()}` : ''}`;
+        // Use our consistent avatar URL with permanent caching
+        const url = getAvatarUrl(character.name, 200);
+        console.log(`CharacterCard: Generated avatar URL for ${character.name}:`, url);
         
         setAvatarUrl(url);
         setIsLoading(false);
       } catch (error: any) {
-        console.error("Error fetching avatar:", error);
+        console.error(`CharacterCard: Error fetching avatar for ${character.name}:`, error);
         
         if (retryCount < 3) {
           // Retry with exponential backoff
           setRetryCount(prev => prev + 1);
         } else {
           // After 3 tries, just use the fallback
+          console.log(`CharacterCard: Using fallback for ${character.name} after ${retryCount} retries`);
           setAvatarUrl(fallbackImage);
           setIsLoading(false);
         }
@@ -67,7 +76,7 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
     };
     
     fetchAvatar();
-  }, [character.id, character.imageUrl, character.name, character.description, fallbackImage, retryCount]);
+  }, [character.id, character.imageUrl, character.name, fallbackImage, retryCount, getAvatarUrl]);
   
   return (
     <button
@@ -89,7 +98,8 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
             alt={character.name}
             fill
             className="object-cover"
-            onError={() => {
+            onError={(e) => {
+              console.error(`CharacterCard: Image error for ${character.name}, URL:`, avatarUrl);
               setImgError(true);
               // If image loading fails and we haven't hit retry limit, try again
               if (retryCount < 3) {

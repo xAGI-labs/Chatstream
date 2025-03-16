@@ -34,6 +34,15 @@ export function CharacterSection({ title, category }: CharacterSectionProps) {
         }
         
         const data = await response.json()
+        
+        // Add debugging to check imageUrls
+        console.log(`Character Section: Fetched ${data.length} ${category} characters:`, 
+          data.map((c: any) => ({ 
+            name: c.name, 
+            hasImageUrl: !!c.imageUrl 
+          }))
+        );
+        
         setCharacters(data.map((char: any) => ({
           id: char.id,
           name: char.name,

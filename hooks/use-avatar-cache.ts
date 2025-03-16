@@ -38,8 +38,8 @@ export function useAvatarCache() {
     // Add timestamp param to avoid browser cache issues
     const timestamp = new Date().getTime();
     
-    // Generate URL using our avatar API endpoint which handles caching
-    const url = `/api/avatar?name=${encodeURIComponent(name)}&width=${size}&height=${size}&t=${timestamp}`;
+    // Generate URL using our avatar API endpoint which handles caching AND checks the database
+    const url = `/api/avatar?name=${encodeURIComponent(name)}&width=${size}&height=${size}&checkDb=true&t=${timestamp}`;
     
     // Cache the URL for future use
     urlCache[cacheKey] = url;
