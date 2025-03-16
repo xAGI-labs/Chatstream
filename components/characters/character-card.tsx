@@ -1,7 +1,6 @@
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
-import { useAvatarCache } from "@/hooks/use-avatar-cache"
 
 export interface Character {
   id: string;
@@ -18,13 +17,8 @@ interface CharacterCardProps {
 
 export function CharacterCard({ character, onClick, disabled }: CharacterCardProps) {
   const [imgError, setImgError] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
   
-  // Direct Robohash URL as absolutely last resort fallback
-  const directFallbackUrl = `https://robohash.org/${encodeURIComponent(character.name || 'unknown')}?size=200x200&set=set4`;
-
   // Debug character data
   useEffect(() => {
     console.log(`Character ${character.name} data:`, {
@@ -33,27 +27,22 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
       hasImageUrl: !!character.imageUrl,
       imageUrl: character.imageUrl
     });
+    
+    // Set loading state based on image URL availability
+    if (character.imageUrl) {
+      setIsLoading(false);
+    }
   }, [character]);
   
-  // Load the avatar directly from the database URL with no fallback to avatar API
-  useEffect(() => {
-    setImgError(false);
-    setIsLoading(true);
-    
-    // CRITICAL: If database provides an imageUrl, we use it directly, no questions asked
-    if (character.imageUrl) {
-      console.log(`CharacterCard: Using database imageUrl for ${character.name}:`, character.imageUrl);
-      setAvatarUrl(character.imageUrl);
-      setIsLoading(false);
-      return;
-    }
-    
-    // Only if database doesn't have an imageUrl, we fallback to robohash
-    console.log(`CharacterCard: No imageUrl in database for ${character.name}, using fallback`);
-    setAvatarUrl(directFallbackUrl);
-    setIsLoading(false);
-    
-  }, [character.id, character.imageUrl, character.name, directFallbackUrl]);
+  // Empty image placeholder - will show a colored div when no image is available
+  // We specifically avoid using Robohash as requested
+  const EmptyImagePlaceholder = () => (
+    <div className="w-full h-full bg-gradient-to-b from-blue-800 to-purple-900 flex items-center justify-center">
+      <span className="text-white font-bold text-lg">
+        {character.name?.charAt(0)?.toUpperCase() || "?"}
+      </span>
+    </div>
+  );
   
   return (
     <button
@@ -67,33 +56,25 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
       )}
     >
       <div className="relative w-full aspect-square rounded-md overflow-hidden mb-3">
-        {isLoading ? (
-          <div className="w-full h-full bg-gradient-to-b from-gray-700 to-gray-800 animate-pulse" />
+        {isLoading || !character.imageUrl ? (
+          <EmptyImagePlaceholder />
         ) : (
           <Image
-            src={imgError ? directFallbackUrl : avatarUrl || directFallbackUrl}
+            src={character.imageUrl}
             alt={character.name}
             fill
             className="object-cover"
             onError={(e) => {
-              console.error(`CharacterCard: Image error for ${character.name}, URL:`, avatarUrl);
-              
-              // Log detailed error info
-              const imgElement = e.target as HTMLImageElement;
-              console.error('Image error details:', {
-                src: imgElement.src,
-                naturalWidth: imgElement.naturalWidth,
-                naturalHeight: imgElement.naturalHeight,
-                complete: imgElement.complete
-              });
-              
-              setImgError(true); // Mark as error to use direct fallback URL
+              console.error(`CharacterCard: Image error for ${character.name}, URL:`, character.imageUrl);
+              setImgError(true);
+              // Just show the placeholder instead of using Robohash
             }}
-            unoptimized={true} // Critical for external URLs to work
-            priority={true} // Load images with higher priority
-            referrerPolicy="no-referrer" // Avoid CORS issues
+            unoptimized={true}
           />
         )}
+        
+        {/* Show placeholder if image loading failed */}
+        {imgError && <EmptyImagePlaceholder />}
       </div>
       <h3 className="font-medium text-sm">{character.name}</h3>
       {character.description && (

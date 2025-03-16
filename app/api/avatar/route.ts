@@ -43,6 +43,8 @@ export async function GET(req: Request) {
   const width = url.searchParams.get("width") || "256";
   const height = url.searchParams.get("height") || "256";
   const checkDb = url.searchParams.get("checkDb") !== "false"; // Default to true
+  // New parameter to control fallback behavior
+  const allowRobohashFallback = url.searchParams.get("allowRobohashFallback") === "true"; // Default to false
   
   console.log(`Avatar API: Requested avatar for ${name}`, { 
     checkDb, 
@@ -140,12 +142,20 @@ export async function GET(req: Request) {
     console.error("Avatar API: Avatar generation failed:", error);
   }
   
-  // Fallback to Robohash - using an absolute URL is important for production
-  console.log("Avatar API: Falling back to Robohash for:", name);
-  const robohashUrl = `https://robohash.org/${encodeURIComponent(name)}?size=${width}x${height}&set=set4`;
+  // Only use Robohash fallback if explicitly allowed
+  if (allowRobohashFallback) {
+    console.log("Avatar API: Using Robohash fallback for:", name);
+    const robohashUrl = `https://robohash.org/${encodeURIComponent(name)}?size=${width}x${height}&set=set4`;
+    persistentCache[cacheKey] = robohashUrl;
+    return NextResponse.redirect(robohashUrl);
+  }
   
-  // Cache even the fallback to prevent future generation attempts for this name
-  persistentCache[cacheKey] = robohashUrl;
-  
-  return NextResponse.redirect(robohashUrl);
+  // No fallback - return a transparent 1x1 pixel image
+  console.log("Avatar API: No image available and fallbacks disabled for:", name);
+  return new NextResponse(null, { 
+    status: 204, // No content
+    headers: {
+      'Content-Type': 'image/gif',
+    }
+  });
 }

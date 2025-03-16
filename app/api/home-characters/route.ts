@@ -5,23 +5,8 @@ import { generateAvatar } from "@/lib/avatar";
 
 const prisma = new PrismaClient();
 
-// Helper to ensure URLs are absolute for production and never null
-function ensureAbsoluteUrl(url: string | null): string {
-  if (!url) {
-    return `https://robohash.org/default-avatar?size=200x200&set=set4`;
-  }
-  
-  // If URL is already absolute, return it
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
-    return url;
-  }
-  
-  // For relative URLs in database, make them absolute with a more reliable approach
-  console.log('Found relative URL in database - converting to absolute:', url);
-  
-  // Force absolute URLs to use HTTPS for production
-  return `https://robohash.org/${encodeURIComponent(url.replace(/[^\w]/g, '-'))}?set=set4&size=200x200`;
-}
+// Default empty string for image URL when no image is available
+const DEFAULT_IMAGE_URL = ""; // Use empty string instead of null
 
 // Helper function to ensure HomeCharacters exist
 async function ensureHomeCharactersExist(category: string, characters: any[], startOrder: number = 0) {
@@ -39,72 +24,61 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
     if (!existingCharacter) {
       console.log(`Creating home character: ${character.name} in category ${category}`);
       
-      // Generate avatar URL if not provided - ENSURE IT'S ALWAYS A STRING, NEVER NULL
-      let imageUrl: string = character.imageUrl || '';
+      // IMPORTANT: Use Together API to generate images, NOT Robohash
+      let imageUrl: string = character.imageUrl || DEFAULT_IMAGE_URL; // Never use null, use empty string
       
-      if (!imageUrl) {
+      // Only attempt to generate an image if Together API key exists and we don't have an image
+      if (imageUrl === DEFAULT_IMAGE_URL && process.env.TOGETHER_API_KEY) {
         try {
-          // Use absolute URL-generating avatar service
-          const generatedUrl = await generateAvatar(character.name, character.description);
-          
-          // Double-check that the URL is absolute, fallback if not
-          imageUrl = generatedUrl && generatedUrl.startsWith('http')
-            ? generatedUrl
-            : `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+          // Convert null to undefined for generateAvatar
+          const description: string | undefined = character.description === null 
+            ? undefined 
+            : character.description;
+            
+          // Use Together AI to generate a high quality image
+          const generatedUrl = await generateAvatar(character.name, description);
+          if (generatedUrl) {
+            imageUrl = generatedUrl;
+            console.log(`Generated image URL for ${character.name}:`, imageUrl);
+          }
         } catch (error) {
           console.error(`Failed to generate avatar for ${character.name}:`, error);
-          imageUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+          // Keep the default empty string 
         }
       }
       
-      // Create the HomeCharacter with absolute URL - never null
+      // Create the HomeCharacter record - never use null for imageUrl
       await prisma.homeCharacter.create({
         data: {
           name: character.name,
           description: character.description || null,
-          imageUrl: ensureAbsoluteUrl(imageUrl), // This will now always return a string
+          imageUrl: imageUrl, // Always a string, never null
           category: category,
           displayOrder: order
         }
       });
-    } else if (!existingCharacter.imageUrl || !existingCharacter.imageUrl.startsWith('http')) {
-      // If character exists but doesn't have a valid avatar, update it
-      
+    } else if ((!existingCharacter.imageUrl || existingCharacter.imageUrl === DEFAULT_IMAGE_URL) && 
+               process.env.TOGETHER_API_KEY) {
+      // Only try to update missing images if Together API key exists
       try {
-        // Convert null to undefined for generateAvatar
+        console.log(`Attempting to generate image for ${character.name} with missing avatar`);
         const description: string | undefined = existingCharacter.description || undefined;
         
-        let imageUrl = '';
-        try {
-          const generatedUrl = await generateAvatar(character.name, description);
-          imageUrl = generatedUrl || '';
-        } catch (error) {
-          console.error(`Failed to generate new avatar for ${character.name}:`, error);
+        // Use Together AI to generate a high quality image
+        const imageUrl = await generateAvatar(character.name, description);
+        
+        if (imageUrl) { // Only update if we got a valid URL
+          await prisma.homeCharacter.update({
+            where: { id: existingCharacter.id },
+            data: { 
+              imageUrl // This will be a string, not null
+            }
+          });
+          console.log(`Updated avatar for ${character.name} to Together-generated URL`);
         }
-        
-        // Update the existing record with the new avatar
-        // Ensure we never pass null to imageUrl
-        const absoluteUrl = imageUrl && imageUrl.startsWith('http') 
-          ? imageUrl 
-          : `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
-        
-        await prisma.homeCharacter.update({
-          where: { id: existingCharacter.id },
-          data: { 
-            imageUrl: absoluteUrl // This is always a string, never null
-          }
-        });
-        
-        console.log(`Updated avatar for ${character.name}`);
       } catch (error) {
-        console.error(`Failed to update avatar for ${character.name}:`, error);
-        // Fallback to robohash with absolute URL
-        const fallbackUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
-        
-        await prisma.homeCharacter.update({
-          where: { id: existingCharacter.id },
-          data: { imageUrl: fallbackUrl }
-        });
+        console.error(`Failed to generate avatar for ${character.name}:`, error);
+        // Don't update if generation fails
       }
     }
     
@@ -139,45 +113,16 @@ export async function GET(req: Request) {
       }
     });
     
-    // FIX ALL URLs: Ensure every single URL is absolute and never null
-    const fixedCharacters = characters.map(character => {
-      // Process the character to ensure imageUrl is always an absolute URL string
-      let processedImageUrl: string = character.imageUrl || '';
-      
-      // If URL isn't absolute or is missing, create a direct robohash URL
-      if (!processedImageUrl || !processedImageUrl.startsWith('http')) {
-        processedImageUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
-        
-        // Update the database in the background for future requests
-        (async () => {
-          try {
-            await prisma.homeCharacter.update({
-              where: { id: character.id },
-              data: { imageUrl: processedImageUrl }
-            });
-            console.log(`Updated ${character.name}'s imageUrl to absolute URL`);
-          } catch (err) {
-            console.error(`Failed to update ${character.name}'s imageUrl:`, err);
-          }
-        })();
-      }
-      
-      return {
-        ...character,
-        imageUrl: processedImageUrl
-      };
-    });
-    
-    // Debug log all the characters and their image URLs
-    console.log(`HOME_CHARACTERS: Returning ${fixedCharacters.length} characters for ${category}`);
-    console.table(fixedCharacters.map(c => ({
+    // IMPORTANT: Do NOT modify the imageUrl - return exactly what's in the database
+    // Log data for debugging
+    console.log(`HOME_CHARACTERS: Returning ${characters.length} characters for ${category}`);
+    console.table(characters.map(c => ({
       name: c.name,
-      hasImage: !!c.imageUrl,
-      imageUrl: c.imageUrl?.substring(0, 30) + '...',
-      absolute: !!c.imageUrl?.startsWith('http')
+      hasImage: !!(c.imageUrl && c.imageUrl !== DEFAULT_IMAGE_URL),
+      imageUrl: c.imageUrl?.substring(0, 30) + (c.imageUrl?.length > 30 ? '...' : '')
     })));
     
-    return NextResponse.json(fixedCharacters);
+    return NextResponse.json(characters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });
