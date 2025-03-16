@@ -5,19 +5,22 @@ import { generateAvatar } from "@/lib/avatar";
 
 const prisma = new PrismaClient();
 
-// Helper to validate and potentially fix stored URLs
-function normalizeImageUrl(url: string | null): string | null {
-  if (!url) return null;
+// Helper to ensure URLs are absolute for production and never null
+function ensureAbsoluteUrl(url: string | null): string {
+  if (!url) {
+    return `https://robohash.org/default-avatar?size=200x200&set=set4`;
+  }
   
   // If URL is already absolute, return it
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
     return url;
   }
   
-  // For relative URLs, we can't easily fix them here without knowing the base URL
-  // Log it for debugging
-  console.log('Warning: Relative URL found in database, this may cause issues in production:', url);
-  return url;
+  // For relative URLs in database, make them absolute with a more reliable approach
+  console.log('Found relative URL in database - converting to absolute:', url);
+  
+  // Force absolute URLs to use HTTPS for production
+  return `https://robohash.org/${encodeURIComponent(url.replace(/[^\w]/g, '-'))}?set=set4&size=200x200`;
 }
 
 // Helper function to ensure HomeCharacters exist
@@ -36,49 +39,59 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
     if (!existingCharacter) {
       console.log(`Creating home character: ${character.name} in category ${category}`);
       
-      // Generate avatar URL if not provided
-      let imageUrl = character.imageUrl || null;
+      // Generate avatar URL if not provided - ENSURE IT'S ALWAYS A STRING, NEVER NULL
+      let imageUrl: string = character.imageUrl || '';
+      
       if (!imageUrl) {
         try {
-          // Convert null to undefined for generateAvatar
-          const description: string | undefined = character.description === null 
-            ? undefined 
-            : character.description;
-            
-          imageUrl = await generateAvatar(character.name, description);
+          // Use absolute URL-generating avatar service
+          const generatedUrl = await generateAvatar(character.name, character.description);
+          
+          // Double-check that the URL is absolute, fallback if not
+          imageUrl = generatedUrl && generatedUrl.startsWith('http')
+            ? generatedUrl
+            : `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
         } catch (error) {
           console.error(`Failed to generate avatar for ${character.name}:`, error);
-          // Fallback to robohash with absolute URL
           imageUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
         }
       }
       
-      // Create the HomeCharacter record
+      // Create the HomeCharacter with absolute URL - never null
       await prisma.homeCharacter.create({
         data: {
           name: character.name,
           description: character.description || null,
-          imageUrl: imageUrl,
+          imageUrl: ensureAbsoluteUrl(imageUrl), // This will now always return a string
           category: category,
           displayOrder: order
         }
       });
-    } else if (!existingCharacter.imageUrl) {
-      // If character exists but doesn't have an avatar, generate one and update the record
-      console.log(`Updating existing character ${character.name} with missing avatar`);
+    } else if (!existingCharacter.imageUrl || !existingCharacter.imageUrl.startsWith('http')) {
+      // If character exists but doesn't have a valid avatar, update it
       
       try {
         // Convert null to undefined for generateAvatar
         const description: string | undefined = existingCharacter.description || undefined;
         
-        const imageUrl = await generateAvatar(character.name, description);
+        let imageUrl = '';
+        try {
+          const generatedUrl = await generateAvatar(character.name, description);
+          imageUrl = generatedUrl || '';
+        } catch (error) {
+          console.error(`Failed to generate new avatar for ${character.name}:`, error);
+        }
         
         // Update the existing record with the new avatar
-        // Ensure we never pass null to imageUrl by using empty string as last resort
+        // Ensure we never pass null to imageUrl
+        const absoluteUrl = imageUrl && imageUrl.startsWith('http') 
+          ? imageUrl 
+          : `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+        
         await prisma.homeCharacter.update({
           where: { id: existingCharacter.id },
           data: { 
-            imageUrl: imageUrl || `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`
+            imageUrl: absoluteUrl // This is always a string, never null
           }
         });
         
@@ -126,22 +139,45 @@ export async function GET(req: Request) {
       }
     });
     
-    // Normalize image URLs for production
-    const normalizedCharacters = characters.map(character => ({
-      ...character,
-      imageUrl: normalizeImageUrl(character.imageUrl)
-    }));
+    // FIX ALL URLs: Ensure every single URL is absolute and never null
+    const fixedCharacters = characters.map(character => {
+      // Process the character to ensure imageUrl is always an absolute URL string
+      let processedImageUrl: string = character.imageUrl || '';
+      
+      // If URL isn't absolute or is missing, create a direct robohash URL
+      if (!processedImageUrl || !processedImageUrl.startsWith('http')) {
+        processedImageUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
+        
+        // Update the database in the background for future requests
+        (async () => {
+          try {
+            await prisma.homeCharacter.update({
+              where: { id: character.id },
+              data: { imageUrl: processedImageUrl }
+            });
+            console.log(`Updated ${character.name}'s imageUrl to absolute URL`);
+          } catch (err) {
+            console.error(`Failed to update ${character.name}'s imageUrl:`, err);
+          }
+        })();
+      }
+      
+      return {
+        ...character,
+        imageUrl: processedImageUrl
+      };
+    });
     
-    // Log data for debugging
-    console.log(`[HOME_CHARACTERS_GET] Returning ${normalizedCharacters.length} characters for category ${category}`, 
-      normalizedCharacters.map(c => ({ 
-        name: c.name, 
-        hasImage: !!c.imageUrl,
-        imageUrlPrefix: c.imageUrl?.substring(0, 20)
-      }))
-    );
+    // Debug log all the characters and their image URLs
+    console.log(`HOME_CHARACTERS: Returning ${fixedCharacters.length} characters for ${category}`);
+    console.table(fixedCharacters.map(c => ({
+      name: c.name,
+      hasImage: !!c.imageUrl,
+      imageUrl: c.imageUrl?.substring(0, 30) + '...',
+      absolute: !!c.imageUrl?.startsWith('http')
+    })));
     
-    return NextResponse.json(normalizedCharacters);
+    return NextResponse.json(fixedCharacters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });

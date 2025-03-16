@@ -16,84 +16,44 @@ interface CharacterCardProps {
   disabled?: boolean;
 }
 
-// Helper to determine if a URL is external/absolute
-function isAbsoluteUrl(url: string): boolean {
-  return /^(https?:\/\/|\/\/)/i.test(url);
-}
-
 export function CharacterCard({ character, onClick, disabled }: CharacterCardProps) {
   const [imgError, setImgError] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
-  const { getAvatarUrl } = useAvatarCache();
   
-  // Use robohash as last-resort fallback only
-  const fallbackImage = `https://robohash.org/${encodeURIComponent(character.name || 'unknown')}?size=200x200&set=set4`;
+  // Direct Robohash URL as absolutely last resort fallback
+  const directFallbackUrl = `https://robohash.org/${encodeURIComponent(character.name || 'unknown')}?size=200x200&set=set4`;
+
+  // Debug character data
+  useEffect(() => {
+    console.log(`Character ${character.name} data:`, {
+      id: character.id,
+      name: character.name,
+      hasImageUrl: !!character.imageUrl,
+      imageUrl: character.imageUrl
+    });
+  }, [character]);
   
-  // Load the avatar with consistent caching
+  // Load the avatar directly from the database URL with no fallback to avatar API
   useEffect(() => {
     setImgError(false);
     setIsLoading(true);
     
-    // Important: Debug log to troubleshoot avatar issues
-    console.log(`CharacterCard: Loading avatar for ${character.name}`, { 
-      hasImageUrl: !!character.imageUrl,
-      imageUrl: character.imageUrl,
-      isAbsolute: character.imageUrl ? isAbsoluteUrl(character.imageUrl) : false,
-      env: process.env.NODE_ENV
-    });
-    
-    // If we already have an imageUrl from the database, ensure it's properly formatted
+    // CRITICAL: If database provides an imageUrl, we use it directly, no questions asked
     if (character.imageUrl) {
-      try {
-        // Make sure we have an absolute URL (important in production)
-        const url = isAbsoluteUrl(character.imageUrl) 
-          ? character.imageUrl 
-          : `${window.location.origin}${character.imageUrl.startsWith('/') ? '' : '/'}${character.imageUrl}`;
-          
-        console.log(`CharacterCard: Using stored imageUrl for ${character.name}:`, url);
-        setAvatarUrl(url);
-        setIsLoading(false);
-        return;
-      } catch (error) {
-        console.error(`CharacterCard: Error processing stored URL for ${character.name}:`, error);
-        // Continue to fallback avatar generation
-      }
+      console.log(`CharacterCard: Using database imageUrl for ${character.name}:`, character.imageUrl);
+      setAvatarUrl(character.imageUrl);
+      setIsLoading(false);
+      return;
     }
     
-    // Only fetch from avatar API if no imageUrl is stored in the database
-    const fetchAvatar = async () => {
-      try {
-        // Add a delay for retries to avoid hammering the API
-        if (retryCount > 0) {
-          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 8000);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
-        // Use our consistent avatar URL with permanent caching
-        const url = getAvatarUrl(character.name, 200);
-        console.log(`CharacterCard: Generated avatar URL for ${character.name}:`, url);
-        
-        setAvatarUrl(url);
-        setIsLoading(false);
-      } catch (error: any) {
-        console.error(`CharacterCard: Error fetching avatar for ${character.name}:`, error);
-        
-        if (retryCount < 3) {
-          // Retry with exponential backoff
-          setRetryCount(prev => prev + 1);
-        } else {
-          // After 3 tries, just use the direct Robohash fallback
-          console.log(`CharacterCard: Using direct fallback for ${character.name} after ${retryCount} retries`);
-          setAvatarUrl(fallbackImage);
-          setIsLoading(false);
-        }
-      }
-    };
+    // Only if database doesn't have an imageUrl, we fallback to robohash
+    console.log(`CharacterCard: No imageUrl in database for ${character.name}, using fallback`);
+    setAvatarUrl(directFallbackUrl);
+    setIsLoading(false);
     
-    fetchAvatar();
-  }, [character.id, character.imageUrl, character.name, fallbackImage, retryCount, getAvatarUrl]);
+  }, [character.id, character.imageUrl, character.name, directFallbackUrl]);
   
   return (
     <button
@@ -111,22 +71,27 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
           <div className="w-full h-full bg-gradient-to-b from-gray-700 to-gray-800 animate-pulse" />
         ) : (
           <Image
-            src={imgError || !avatarUrl ? fallbackImage : avatarUrl}
+            src={imgError ? directFallbackUrl : avatarUrl || directFallbackUrl}
             alt={character.name}
             fill
             className="object-cover"
             onError={(e) => {
               console.error(`CharacterCard: Image error for ${character.name}, URL:`, avatarUrl);
-              setImgError(true);
-              // Immediately use direct Robohash fallback on error in production
-              if (process.env.NODE_ENV === 'production' || retryCount >= 2) {
-                setAvatarUrl(fallbackImage);
-              } else {
-                // Only retry in development a limited number of times
-                setRetryCount(prev => prev + 1);
-              }
+              
+              // Log detailed error info
+              const imgElement = e.target as HTMLImageElement;
+              console.error('Image error details:', {
+                src: imgElement.src,
+                naturalWidth: imgElement.naturalWidth,
+                naturalHeight: imgElement.naturalHeight,
+                complete: imgElement.complete
+              });
+              
+              setImgError(true); // Mark as error to use direct fallback URL
             }}
-            unoptimized={true} // Important for external URLs in production
+            unoptimized={true} // Critical for external URLs to work
+            priority={true} // Load images with higher priority
+            referrerPolicy="no-referrer" // Avoid CORS issues
           />
         )}
       </div>
