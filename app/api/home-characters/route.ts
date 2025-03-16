@@ -5,6 +5,21 @@ import { generateAvatar } from "@/lib/avatar";
 
 const prisma = new PrismaClient();
 
+// Helper to validate and potentially fix stored URLs
+function normalizeImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  
+  // If URL is already absolute, return it
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
+    return url;
+  }
+  
+  // For relative URLs, we can't easily fix them here without knowing the base URL
+  // Log it for debugging
+  console.log('Warning: Relative URL found in database, this may cause issues in production:', url);
+  return url;
+}
+
 // Helper function to ensure HomeCharacters exist
 async function ensureHomeCharactersExist(category: string, characters: any[], startOrder: number = 0) {
   let order = startOrder;
@@ -33,7 +48,7 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
           imageUrl = await generateAvatar(character.name, description);
         } catch (error) {
           console.error(`Failed to generate avatar for ${character.name}:`, error);
-          // Fallback to robohash
+          // Fallback to robohash with absolute URL
           imageUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
         }
       }
@@ -70,7 +85,7 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
         console.log(`Updated avatar for ${character.name}`);
       } catch (error) {
         console.error(`Failed to update avatar for ${character.name}:`, error);
-        // Fallback to robohash
+        // Fallback to robohash with absolute URL
         const fallbackUrl = `https://robohash.org/${encodeURIComponent(character.name)}?size=200x200&set=set4`;
         
         await prisma.homeCharacter.update({
@@ -111,7 +126,22 @@ export async function GET(req: Request) {
       }
     });
     
-    return NextResponse.json(characters);
+    // Normalize image URLs for production
+    const normalizedCharacters = characters.map(character => ({
+      ...character,
+      imageUrl: normalizeImageUrl(character.imageUrl)
+    }));
+    
+    // Log data for debugging
+    console.log(`[HOME_CHARACTERS_GET] Returning ${normalizedCharacters.length} characters for category ${category}`, 
+      normalizedCharacters.map(c => ({ 
+        name: c.name, 
+        hasImage: !!c.imageUrl,
+        imageUrlPrefix: c.imageUrl?.substring(0, 20)
+      }))
+    );
+    
+    return NextResponse.json(normalizedCharacters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });

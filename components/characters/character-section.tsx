@@ -39,16 +39,23 @@ export function CharacterSection({ title, category }: CharacterSectionProps) {
         console.log(`Character Section: Fetched ${data.length} ${category} characters:`, 
           data.map((c: any) => ({ 
             name: c.name, 
-            hasImageUrl: !!c.imageUrl 
+            hasImageUrl: !!c.imageUrl,
+            imageUrlType: c.imageUrl ? (c.imageUrl.startsWith('http') ? 'absolute' : 'relative') : 'none',
+            imageUrlStart: c.imageUrl?.substring(0, 25)
           }))
         );
         
-        setCharacters(data.map((char: any) => ({
-          id: char.id,
-          name: char.name,
-          description: char.description,
-          imageUrl: char.imageUrl
-        })))
+        // Ensure we handle image URLs consistently
+        setCharacters(data.map((char: any) => {
+          // Map database characters to component characters
+          return {
+            id: char.id,
+            name: char.name,
+            description: char.description,
+            // Ensure image URL is valid or set to undefined
+            imageUrl: char.imageUrl || undefined
+          };
+        }))
       } catch (error) {
         console.error("Error fetching home characters:", error)
         toast.error("Failed to load characters")

@@ -17,6 +17,25 @@ declare global {
 // In production, consider using Redis or another persistent cache
 const persistentCache: Record<string, string> = {};
 
+// Helper to validate URLs to prevent broken images
+function isValidImageUrl(url: string): boolean {
+  if (!url) return false;
+  
+  // Must be an absolute URL for production environments
+  if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('//')) {
+    console.log('Avatar API: Invalid URL format (not absolute)', url);
+    return false;
+  }
+  
+  // Simple validation - should be improved for production
+  if (url.includes('undefined') || url.includes('[object Object]')) {
+    console.log('Avatar API: Invalid URL content', url);
+    return false;
+  }
+  
+  return true;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const name = url.searchParams.get("name") || "Anonymous";
@@ -25,7 +44,10 @@ export async function GET(req: Request) {
   const height = url.searchParams.get("height") || "256";
   const checkDb = url.searchParams.get("checkDb") !== "false"; // Default to true
   
-  console.log(`Avatar API: Requested avatar for ${name}`, { checkDb });
+  console.log(`Avatar API: Requested avatar for ${name}`, { 
+    checkDb, 
+    env: process.env.NODE_ENV 
+  });
   
   // Generate cache key that includes description if available
   const cacheKey = `avatar-${name}${description ? `-${description}` : ''}`;
@@ -44,7 +66,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(avatarCache[cacheKey]);
   }
   
-  // NEW: Try to find a stored avatar URL in the database first
+  // Try to find a stored avatar URL in the database first
   if (checkDb) {
     try {
       // Check HomeCharacter table first
@@ -53,10 +75,12 @@ export async function GET(req: Request) {
         select: { imageUrl: true }
       });
       
-      if (homeChar?.imageUrl) {
-        console.log("Avatar API: Found HomeCharacter imageUrl for:", name);
+      if (homeChar?.imageUrl && isValidImageUrl(homeChar.imageUrl)) {
+        console.log("Avatar API: Found valid HomeCharacter imageUrl for:", name);
         persistentCache[cacheKey] = homeChar.imageUrl;
         return NextResponse.redirect(homeChar.imageUrl);
+      } else if (homeChar?.imageUrl) {
+        console.log("Avatar API: Found HomeCharacter imageUrl but invalid format:", homeChar.imageUrl);
       }
       
       // Also check Character table
@@ -65,10 +89,12 @@ export async function GET(req: Request) {
         select: { imageUrl: true }
       });
       
-      if (character?.imageUrl) {
-        console.log("Avatar API: Found Character imageUrl for:", name);
+      if (character?.imageUrl && isValidImageUrl(character.imageUrl)) {
+        console.log("Avatar API: Found valid Character imageUrl for:", name);
         persistentCache[cacheKey] = character.imageUrl;
         return NextResponse.redirect(character.imageUrl);
+      } else if (character?.imageUrl) {
+        console.log("Avatar API: Found Character imageUrl but invalid format:", character.imageUrl);
       }
     } catch (error) {
       console.error("Avatar API: Error checking database for stored avatar:", error);
@@ -114,7 +140,7 @@ export async function GET(req: Request) {
     console.error("Avatar API: Avatar generation failed:", error);
   }
   
-  // Fallback to Robohash
+  // Fallback to Robohash - using an absolute URL is important for production
   console.log("Avatar API: Falling back to Robohash for:", name);
   const robohashUrl = `https://robohash.org/${encodeURIComponent(name)}?size=${width}x${height}&set=set4`;
   
