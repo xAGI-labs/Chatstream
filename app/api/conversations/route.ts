@@ -6,6 +6,7 @@ import { generateCharacterInstructions } from "@/lib/character"
 import { generateAvatar } from "@/lib/avatar"
 import { enrichCharacterDescription, generateDetailedInstructions } from "@/lib/character-enrichment"
 import axios from "axios"
+import { ensureUserExists } from "@/lib/user-sync"
 
 const prisma = new PrismaClient()
 
@@ -28,6 +29,13 @@ export async function POST(req: Request) {
     
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })
+    }
+    
+    // Ensure user exists in database (creates if needed)
+    const dbUser = await ensureUserExists()
+    if (!dbUser) {
+      console.error("Failed to ensure user exists in database")
+      return new NextResponse("User sync error", { status: 500 })
     }
     
     const body = await req.json()
@@ -213,6 +221,13 @@ export async function GET(req: Request) {
     
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 })
+    }
+    
+    // Ensure user exists in database (creates if needed)
+    const dbUser = await ensureUserExists()
+    if (!dbUser) {
+      console.error("Failed to ensure user exists in database")
+      return new NextResponse("User sync error", { status: 500 })
     }
     
     // Get user's conversations
