@@ -86,24 +86,6 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
   }
 }
 
-// Helper function to check if a URL is likely a Together AI URL that might expire
-function isExpiringTogetherUrl(url: string): boolean {
-  return url.includes('X-Amz-Expires=') && 
-         (url.includes('together-ai') || url.includes('api.together.ai'));
-}
-
-// Helper function to convert a potentially expiring URL to a proxied version
-function getReliableImageUrl(url: string | null): string {
-  if (!url) return '';
-  
-  // If it's a Together AI URL, use our proxy to ensure reliability
-  if (isExpiringTogetherUrl(url)) {
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`;
-  }
-  
-  return url;
-}
-
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const category = url.searchParams.get("category") || "popular";
@@ -131,22 +113,16 @@ export async function GET(req: Request) {
       }
     });
     
-    // Process image URLs to make them more reliable in production
-    const processedCharacters = characters.map(character => ({
-      ...character,
-      imageUrl: getReliableImageUrl(character.imageUrl)
-    }));
-    
     // IMPORTANT: Do NOT modify the imageUrl - return exactly what's in the database
     // Log data for debugging
-    console.log(`HOME_CHARACTERS: Returning ${processedCharacters.length} characters for ${category}`);
-    console.table(processedCharacters.map(c => ({
+    console.log(`HOME_CHARACTERS: Returning ${characters.length} characters for ${category}`);
+    console.table(characters.map(c => ({
       name: c.name,
-      hasImage: !!c.imageUrl,
-      isProxied: c.imageUrl?.includes('/api/image-proxy')
+      hasImage: !!(c.imageUrl && c.imageUrl !== DEFAULT_IMAGE_URL),
+      imageUrl: c.imageUrl?.substring(0, 30) + (c.imageUrl?.length > 30 ? '...' : '')
     })));
     
-    return NextResponse.json(processedCharacters);
+    return NextResponse.json(characters);
   } catch (error) {
     console.error("[HOME_CHARACTERS_GET]", error);
     return new NextResponse("Internal error", { status: 500 });
