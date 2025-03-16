@@ -21,13 +21,6 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
   
   // Debug character data
   useEffect(() => {
-    console.log(`Character ${character.name} data:`, {
-      id: character.id,
-      name: character.name,
-      hasImageUrl: !!character.imageUrl,
-      imageUrl: character.imageUrl
-    });
-    
     // Set loading state based on image URL availability
     if (character.imageUrl) {
       setIsLoading(false);
@@ -35,7 +28,6 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
   }, [character]);
   
   // Empty image placeholder - will show a colored div when no image is available
-  // We specifically avoid using Robohash as requested
   const EmptyImagePlaceholder = () => (
     <div className="w-full h-full bg-gradient-to-b from-blue-800 to-purple-900 flex items-center justify-center">
       <span className="text-white font-bold text-lg">
@@ -65,11 +57,13 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
             fill
             className="object-cover"
             onError={(e) => {
-              console.error(`CharacterCard: Image error for ${character.name}, URL:`, character.imageUrl);
               setImgError(true);
-              // Just show the placeholder instead of using Robohash
             }}
             unoptimized={true}
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
+            sizes="(max-width: 768px) 100vw, 300px" 
+            priority={true}
           />
         )}
         
