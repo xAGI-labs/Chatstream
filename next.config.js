@@ -8,6 +8,8 @@ const nextConfig = {
       'together.xyz',
       'api.together.xyz',
       'api.together.ai',
+      'res.cloudinary.com', // Add Cloudinary domain
+      'dht33kdwe.cloudinary.com', // Add specific Cloudinary subdomain
     ],
     unoptimized: process.env.NODE_ENV === 'production',
   },

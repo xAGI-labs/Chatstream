@@ -35,7 +35,6 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
   }, [character]);
   
   // Empty image placeholder - will show a colored div when no image is available
-  // We specifically avoid using Robohash as requested
   const EmptyImagePlaceholder = () => (
     <div className="w-full h-full bg-gradient-to-b from-blue-800 to-purple-900 flex items-center justify-center">
       <span className="text-white font-bold text-lg">
@@ -43,6 +42,18 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
       </span>
     </div>
   );
+  
+  // Validate image URL (supports both direct URLs and Cloudinary URLs)
+  const isValidImageUrl = (url?: string): boolean => {
+    return !!url && (
+      url.startsWith('http://') || 
+      url.startsWith('https://') ||
+      url.startsWith('/api/avatar')
+    );
+  };
+  
+  // Get actual image URL to use
+  const imageUrl = isValidImageUrl(character.imageUrl) ? character.imageUrl : null;
   
   return (
     <button
@@ -56,18 +67,17 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
       )}
     >
       <div className="relative w-full aspect-square rounded-md overflow-hidden mb-3">
-        {isLoading || !character.imageUrl ? (
+        {!imageUrl || imgError ? (
           <EmptyImagePlaceholder />
         ) : (
           <Image
-            src={character.imageUrl}
+            src={imageUrl}
             alt={character.name}
             fill
             className="object-cover"
             onError={(e) => {
-              console.error(`CharacterCard: Image error for ${character.name}, URL:`, character.imageUrl);
+              console.error(`CharacterCard: Image error for ${character.name}, URL:`, imageUrl);
               setImgError(true);
-              // Just show the placeholder instead of using Robohash
             }}
             unoptimized={true}
           />
