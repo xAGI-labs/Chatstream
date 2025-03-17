@@ -201,6 +201,17 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+  
+  /* Textarea placeholder styling */
+  textarea::placeholder {
+    color: theme('colors.muted.foreground');
+    opacity: 0.6;
+  }
+  
+  /* Smoother autosizing for textarea */
+  textarea {
+    transition: height 0.1s ease;
+  }
 }
 
 
