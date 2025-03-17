@@ -34,12 +34,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Required for production build
-  swcMinify: true,
-  experimental: {
-    // Enable Nixpacks compatibility
-    appDir: true,
-  }
+  // Removed deprecated options:
+  // - swcMinify (now default)
+  // - experimental.appDir (now default in Next.js 15+)
 };
 
 module.exports = nextConfig;

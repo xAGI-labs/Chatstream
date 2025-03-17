@@ -51,8 +51,7 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  req: Request,
-  // Use a direct object pattern to avoid property access on params object
+  // Fixed: Removed duplicate req parameter
   { params }: RouteContext<{ characterId: string }>
 ) {
   try {
