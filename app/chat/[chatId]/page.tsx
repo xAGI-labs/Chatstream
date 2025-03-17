@@ -15,6 +15,29 @@ export default function ChatPage() {
   const { conversation, messages, sendMessage, loading } = useConversation(chatId as string)
   const [isWaiting, setIsWaiting] = useState(false)
   
+  // Debug conversation data
+  useEffect(() => {
+    if (conversation) {
+      console.log("Chat Page - Conversation data:", {
+        id: conversation.id,
+        title: conversation.title,
+        hasCharacter: !!conversation.character,
+        characterId: conversation.characterId,
+        characterName: conversation.character?.name,
+        messagesCount: messages.length
+      });
+      
+      // Log warning if character data is missing
+      if (!conversation.character) {
+        console.warn("Chat Page - Character data missing in conversation", { 
+          conversationId: conversation.id,
+          characterId: conversation.characterId 
+        });
+      }
+    }
+  }, [conversation, messages]);
+
+  // Authentication check
   if (!userId) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -29,6 +52,21 @@ export default function ChatPage() {
     )
   }
   
+  // Prepare character data for components with proper type handling
+  const characterData = conversation?.character 
+    ? {
+        name: conversation.character.name,
+        // Convert null to undefined for imageUrl to satisfy ChatHeader props
+        imageUrl: conversation.character.imageUrl || undefined
+      }
+    : (conversation?.characterId 
+        ? {
+            id: conversation.characterId,
+            name: "AI Assistant", // Placeholder name while character loads
+            imageUrl: undefined
+          } 
+        : undefined);
+  
   return (
     <div className="flex h-screen overflow-hidden bg-muted/20">
       {/* Sidebar */}
@@ -38,11 +76,11 @@ export default function ChatPage() {
       
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 overflow-hidden relative">
-        {/* Chat Header */}
+        {/* Chat Header - pass loading as boolean */}
         <ChatHeader 
-          character={conversation?.character} 
+          character={characterData}
           title={conversation?.title}
-          loading={loading}
+          loading={!!loading} // Ensure it's boolean
         />
         
         {/* Messages Area */}
@@ -50,9 +88,9 @@ export default function ChatPage() {
           <div className="absolute inset-0 overflow-y-auto">
             <ChatMessages 
               messages={messages} 
-              loading={loading}
-              isWaiting={isWaiting}
-              character={conversation?.character}
+              loading={loading === true} // Ensure boolean type
+              isWaiting={!!isWaiting} // Ensure boolean type
+              character={characterData}
             />
           </div>
         </div>
@@ -63,8 +101,8 @@ export default function ChatPage() {
             await sendMessage(content)
             setIsWaiting(false)
           }}
-          disabled={loading} 
-          isWaiting={isWaiting}
+          disabled={loading === true} // Ensure boolean type
+          isWaiting={!!isWaiting} // Ensure boolean type
           setIsWaiting={setIsWaiting}
         />
       </div>

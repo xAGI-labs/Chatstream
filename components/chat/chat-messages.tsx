@@ -10,15 +10,20 @@ import { format } from "date-fns"
 
 interface ChatMessagesProps {
   messages: Message[];
-  loading?: boolean;
-  isWaiting?: boolean;
+  loading?: boolean; // Only boolean | undefined
+  isWaiting?: boolean; // Only boolean | undefined
   character?: {
     name: string;
-    imageUrl?: string;
+    imageUrl?: string | null; // Updated to match ChatHeader
   };
 }
 
-export function ChatMessages({ messages, loading, isWaiting, character }: ChatMessagesProps) {
+export function ChatMessages({ 
+  messages, 
+  loading = false, // Provide default value
+  isWaiting = false, // Provide default value
+  character 
+}: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [characterImgError, setCharacterImgError] = useState(false);
   const [userImgError, setUserImgError] = useState(false);
@@ -62,6 +67,17 @@ export function ChatMessages({ messages, loading, isWaiting, character }: ChatMe
     }
   }, [messages, isWaiting]);
   
+  // For debugging
+  useEffect(() => {
+    console.log("ChatMessages props:", {
+      messagesCount: messages?.length || 0,
+      loading: !!loading,
+      isWaiting: !!isWaiting,
+      hasCharacter: !!character,
+      characterName: character?.name
+    });
+  }, [messages, loading, isWaiting, character]);
+
   if (loading) {
     return (
       <div className="flex flex-col space-y-6 px-4 py-6 h-full">

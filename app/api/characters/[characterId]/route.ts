@@ -10,12 +10,11 @@ type RouteContext<T> = { params: T }
 
 export async function GET(
   req: Request,
-  // Use a direct object pattern to avoid property access on params object
-  { params }: RouteContext<{ characterId: string }>
+  { params }: { params: { characterId: string } }
 ) {
   try {
-    // Extract characterId directly from params through destructuring
-    const { characterId } = params
+    // Fix: Access characterId from params object directly - don't destructure
+    const characterId = params.characterId
     
     // Verify we have a characterId
     if (!characterId) {
@@ -51,6 +50,7 @@ export async function GET(
 }
 
 export async function PATCH(
+  req: Request,
   req: Request,
   // Use a direct object pattern to avoid property access on params object
   { params }: RouteContext<{ characterId: string }>

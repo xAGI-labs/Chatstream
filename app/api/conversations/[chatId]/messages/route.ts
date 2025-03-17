@@ -1,51 +1,52 @@
 // @ts-nocheck
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
-import { PrismaClient, Role } from "@prisma/client"
-import OpenAI from "openai"
+import { PrismaClient } from "@prisma/client"
+import { generateResponse } from "@/lib/ai-response"
 
 const prisma = new PrismaClient()
-const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_KEY
-})
 
 // Type for the context parameter with generic params
 type RouteContext<T> = { params: T }
 
 export async function POST(
   req: Request,
-  // Use a direct object pattern to avoid property access on params object
-  { params }: RouteContext<{ chatId: string }>
+  context: { params: { chatId: string } }
 ) {
   try {
-    // Extract chatId directly from params through destructuring
-    const { chatId } = params
-    
-    // Verify we have a chatId
-    if (!chatId) {
-      return new NextResponse("Chat ID is required", { status: 400 })
-    }
-    
-    const { userId } = await auth()
+    const { userId } = await auth();
     
     if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    
+    const chatId = context.params.chatId;
+    
+    if (!chatId) {
+      return new NextResponse("Chat ID is required", { status: 400 });
     }
     
     const body = await req.json()
     const { content } = body
     
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      return new NextResponse("Invalid content", { status: 400 })
+    if (!content || typeof content !== "string" || content.trim() === "") {
+      return new NextResponse("Message content is required", { status: 400 })
     }
     
-    // Get the conversation and check if user has access
+    // Verify conversation exists and belongs to user - INCLUDE CHARACTER DATA
     const conversation = await prisma.conversation.findUnique({
       where: {
-        id: chatId
+        id: chatId,
+        userId
       },
       include: {
-        character: true
+        character: true,
+        messages: {
+          orderBy: {
+            createdAt: 'asc'
+          },
+          take: 50 // Limit for context
+        }
       }
     })
     
@@ -53,69 +54,54 @@ export async function POST(
       return new NextResponse("Conversation not found", { status: 404 })
     }
     
-    if (conversation.userId !== userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    // If character is missing, try to fetch it separately
+    if (!conversation.character && conversation.characterId) {
+      console.log(`Character missing in messages route, fetching separately: ${conversation.characterId}`)
+      
+      try {
+        const character = await prisma.character.findUnique({
+          where: { id: conversation.characterId }
+        })
+        
+        if (character) {
+          console.log(`Found character separately: ${character.name}`)
+          conversation.character = character
+        } else {
+          console.error(`Character with ID ${conversation.characterId} not found`)
+        }
+      } catch (error) {
+        console.error("Error fetching character separately:", error)
+      }
     }
     
     // Create user message
     const userMessage = await prisma.message.create({
       data: {
-        content: content.trim(),
+        content,
         role: "user",
         conversationId: chatId
       }
     })
     
-    // Get previous messages to build context
-    const previousMessages = await prisma.message.findMany({
-      where: {
-        conversationId: chatId
-      },
-      orderBy: {
-        createdAt: "asc"
-      },
-      take: 10 // Limit to last 10 messages for context
-    })
+    // Generate AI response using character data
+    let aiResponse = "I'm sorry, I couldn't generate a response."
     
-    // Build messages for OpenAI API
-    const messageHistory = previousMessages.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }))
+    try {
+      aiResponse = await generateResponse(content, conversation)
+    } catch (error) {
+      console.error("Error generating AI response:", error)
+    }
     
-    // Add system message with character instructions
-    // Use type assertion for the OpenAI API format which accepts "system" role
-    messageHistory.unshift({
-      role: "system" as any, // Type assertion to bypass TypeScript check
-      content: `You are ${conversation.character.name}. ${conversation.character.instructions}`
-    })
-    
-    // Add the newest user message
-    messageHistory.push({
-      role: "user",
-      content: content.trim()
-    })
-    
-    // Get response from OpenAI
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: messageHistory as any[], // Type assertion for the entire array
-      temperature: 0.7,
-      max_tokens: 500
-    })
-    
-    const aiContent = response.choices[0]?.message?.content || "I'm not sure how to respond to that."
-    
-    // Save AI response
+    // Create AI message
     const aiMessage = await prisma.message.create({
       data: {
-        content: aiContent,
+        content: aiResponse,
         role: "assistant",
         conversationId: chatId
       }
     })
     
-    // Update the conversation's updatedAt timestamp
+    // Update conversation timestamp
     await prisma.conversation.update({
       where: { id: chatId },
       data: { updatedAt: new Date() }

@@ -3,21 +3,34 @@
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Smile, Mic, PlusCircle } from "lucide-react"
+import { Send, PlusCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChatInputProps {
   onSend: (content: string) => Promise<void>;
-  disabled?: boolean;
-  isWaiting?: boolean;
+  disabled?: boolean; // Only boolean | undefined
+  isWaiting?: boolean; // Only boolean | undefined
   setIsWaiting?: (waiting: boolean) => void;
 }
 
-export function ChatInput({ onSend, disabled, isWaiting, setIsWaiting }: ChatInputProps) {
+export function ChatInput({ 
+  onSend, 
+  disabled = false, // Provide default value 
+  isWaiting = false, // Provide default value
+  setIsWaiting 
+}: ChatInputProps) {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [rows, setRows] = useState(1)
+  
+  // Add debugging
+  useEffect(() => {
+    console.log("ChatInput props:", {
+      disabled: !!disabled,
+      isWaiting: !!isWaiting
+    });
+  }, [disabled, isWaiting]);
   
   useEffect(() => {
     if (textareaRef.current) {

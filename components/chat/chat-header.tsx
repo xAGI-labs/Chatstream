@@ -15,23 +15,38 @@ import {
 interface ChatHeaderProps {
   character?: {
     name: string;
-    imageUrl?: string;
+    imageUrl?: string | null; // Modified to accept null
   };
   title?: string;
-  loading?: boolean;
+  loading?: boolean; // This only accepts boolean | undefined
 }
 
 export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const router = useRouter();
   
+  // Add debug logging to see what's coming in
+  useEffect(() => {
+    console.log("ChatHeader - Props:", { 
+      characterExists: !!character,
+      characterName: character?.name, 
+      hasImageUrl: !!character?.imageUrl,
+      title, 
+      loading 
+    });
+  }, [character, title, loading]);
+  
   // Reset error state when character changes
   useEffect(() => {
     if (character) setImgError(false);
   }, [character?.name]);
   
-  // Use the character's image URL if available
+  // Use the character's image URL if available - handle null value
   const avatarUrl = !imgError && character?.imageUrl ? character.imageUrl : null;
+  
+  // Determine character display name with better fallback handling
+  const displayName = character?.name || 
+    (loading ? "Loading..." : "AI Assistant");
 
   return (
     <header className="flex items-center justify-between p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky top-0 z-10 h-16">
@@ -60,15 +75,18 @@ export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
               {avatarUrl ? (
                 <Image 
                   src={avatarUrl} 
-                  alt={character?.name || "Character"} 
+                  alt={displayName} 
                   fill
                   className="object-cover"
-                  onError={() => setImgError(true)}
+                  onError={(e) => {
+                    console.error(`Header image error for ${displayName}:`, e);
+                    setImgError(true);
+                  }}
                   priority
                 />
               ) : (
                 <div className="bg-primary/20 h-full w-full flex items-center justify-center">
-                  <span className="font-semibold text-primary">{character?.name?.[0] || '?'}</span>
+                  <span className="font-semibold text-primary">{displayName[0] || '?'}</span>
                 </div>
               )}
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
@@ -76,7 +94,7 @@ export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
             <div>
               <div className="flex items-center">
                 <h3 className="font-semibold text-sm">
-                  {character?.name || "AI Assistant"}
+                  {displayName}
                 </h3>
                 <div className="bg-green-500/20 text-green-600 text-xs px-1.5 py-0.5 rounded ml-2">
                   Online
