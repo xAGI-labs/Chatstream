@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
-import { generateResponse } from "@/lib/ai-response"
+import { generateCharacterResponse } from "@/lib/chat-helpers"
 
 const prisma = new PrismaClient()
 
@@ -83,13 +83,29 @@ export async function POST(
       }
     })
     
-    // Generate AI response using character data
-    let aiResponse = "I'm sorry, I couldn't generate a response."
+    // Generate AI response using our direct helper function
+    let aiResponse = "I'm sorry, I couldn't generate a response.";
     
     try {
-      aiResponse = await generateResponse(content, conversation)
+      // Format recent messages for context
+      const recentMessages = conversation.messages
+        .slice(-5)
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        }));
+      
+      // Generate response directly - no more API-to-API calls
+      aiResponse = await generateCharacterResponse(
+        conversation.characterId, 
+        recentMessages,
+        content
+      );
+      
+      console.log(`Generated response for conversation ${chatId}`);
     } catch (error) {
-      console.error("Error generating AI response:", error)
+      console.error("Error generating AI response:", error);
+      aiResponse = `I apologize, but I'm having temporary technical difficulties. Please try again in a moment.`;
     }
     
     // Create AI message
@@ -99,20 +115,20 @@ export async function POST(
         role: "assistant",
         conversationId: chatId
       }
-    })
+    });
     
     // Update conversation timestamp
     await prisma.conversation.update({
       where: { id: chatId },
       data: { updatedAt: new Date() }
-    })
+    });
     
     return NextResponse.json({
       userMessage,
       aiMessage
-    })
+    });
   } catch (error) {
-    console.error("[MESSAGES_POST]", error)
-    return new NextResponse("Internal error", { status: 500 })
+    console.error("[MESSAGES_POST]", error);
+    return new NextResponse("Internal error", { status: 500 });
   }
 }
