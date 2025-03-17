@@ -28,18 +28,19 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
       let imageUrl: string = character.imageUrl || DEFAULT_IMAGE_URL; // Never use null, use empty string
       
       // Only attempt to generate an image if Together API key exists and we don't have an image
-      if (imageUrl === DEFAULT_IMAGE_URL && process.env.TOGETHER_API_KEY) {
+      if (imageUrl === DEFAULT_IMAGE_URL) {
         try {
           // Convert null to undefined for generateAvatar
           const description: string | undefined = character.description === null 
             ? undefined 
             : character.description;
             
-          // Use Together AI to generate a high quality image
+          // Use generateAvatar which now handles Cloudinary integration
+          console.log(`Generating Cloudinary avatar for new character: ${character.name}`);
           const generatedUrl = await generateAvatar(character.name, description);
           if (generatedUrl) {
             imageUrl = generatedUrl;
-            console.log(`Generated image URL for ${character.name}:`, imageUrl);
+            console.log(`Generated Cloudinary image URL for ${character.name}:`, imageUrl);
           }
         } catch (error) {
           console.error(`Failed to generate avatar for ${character.name}:`, error);
@@ -57,28 +58,26 @@ async function ensureHomeCharactersExist(category: string, characters: any[], st
           displayOrder: order
         }
       });
-    } else if ((!existingCharacter.imageUrl || existingCharacter.imageUrl === DEFAULT_IMAGE_URL) && 
-               process.env.TOGETHER_API_KEY) {
-      // Only try to update missing images if Together API key exists
+    } else if (!existingCharacter.imageUrl || existingCharacter.imageUrl === DEFAULT_IMAGE_URL) {
+      // Only try to update missing images
       try {
-        console.log(`Attempting to generate image for ${character.name} with missing avatar`);
+        console.log(`Generating Cloudinary avatar for existing character: ${character.name}`);
         const description: string | undefined = existingCharacter.description || undefined;
         
-        // Use Together AI to generate a high quality image
+        // Generate a Cloudinary image
         const imageUrl = await generateAvatar(character.name, description);
         
         if (imageUrl) { // Only update if we got a valid URL
           await prisma.homeCharacter.update({
             where: { id: existingCharacter.id },
             data: { 
-              imageUrl // This will be a string, not null
+              imageUrl // This will be the Cloudinary URL
             }
           });
-          console.log(`Updated avatar for ${character.name} to Together-generated URL`);
+          console.log(`Updated avatar for ${character.name} to Cloudinary URL: ${imageUrl}`);
         }
       } catch (error) {
         console.error(`Failed to generate avatar for ${character.name}:`, error);
-        // Don't update if generation fails
       }
     }
     

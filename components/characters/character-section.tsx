@@ -27,7 +27,9 @@ export function CharacterSection({ title, category }: CharacterSectionProps) {
     async function fetchHomeCharacters() {
       try {
         setIsFetching(true)
-        const response = await fetch(`/api/home-characters?category=${category}`)
+        // Add a timestamp to bust cache
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/api/home-characters?category=${category}&t=${timestamp}`)
         
         if (!response.ok) {
           throw new Error("Failed to fetch characters")
@@ -40,8 +42,13 @@ export function CharacterSection({ title, category }: CharacterSectionProps) {
           data.map((c: any) => ({ 
             name: c.name, 
             hasImageUrl: !!c.imageUrl,
-            imageUrlType: c.imageUrl ? (c.imageUrl.startsWith('http') ? 'absolute' : 'relative') : 'none',
-            imageUrlStart: c.imageUrl?.substring(0, 25)
+            imageUrlType: c.imageUrl ? (
+              c.imageUrl.includes('cloudinary') ? 'cloudinary' : 
+              c.imageUrl.includes('together') ? 'together' :
+              c.imageUrl.startsWith('data:') ? 'data-uri' :  
+              'other'
+            ) : 'none',
+            imageUrlStart: c.imageUrl?.substring(0, 50)
           }))
         );
         

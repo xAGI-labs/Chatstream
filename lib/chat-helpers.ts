@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
 
-// Initialize OpenAI client
+// Initialize OpenAI client - FIX: Corrected environment variable name
 const openai = new OpenAI({
-  apiKey: process.env.OPEN_AI_KEY
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 const prisma = new PrismaClient();

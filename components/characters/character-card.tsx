@@ -19,13 +19,20 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
   const [imgError, setImgError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Debug character data
+  // Debug character data including image URL type
   useEffect(() => {
+    const imageUrlType = character.imageUrl ? 
+      (character.imageUrl.includes('cloudinary') ? 'cloudinary' : 
+       character.imageUrl.includes('together') ? 'together' :
+       character.imageUrl.startsWith('data:') ? 'data-uri' : 
+       'other') : 'none';
+    
     console.log(`Character ${character.name} data:`, {
       id: character.id,
       name: character.name,
       hasImageUrl: !!character.imageUrl,
-      imageUrl: character.imageUrl
+      imageUrlType,
+      imageUrl: character.imageUrl?.substring(0, 50)
     });
     
     // Set loading state based on image URL availability
@@ -48,7 +55,8 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
     return !!url && (
       url.startsWith('http://') || 
       url.startsWith('https://') ||
-      url.startsWith('/api/avatar')
+      url.startsWith('/api/avatar') ||
+      url.startsWith('data:') // Also accept data URIs for backward compatibility
     );
   };
   
@@ -79,7 +87,7 @@ export function CharacterCard({ character, onClick, disabled }: CharacterCardPro
               console.error(`CharacterCard: Image error for ${character.name}, URL:`, imageUrl);
               setImgError(true);
             }}
-            unoptimized={true}
+            unoptimized={true} // Needed for external URLs like Cloudinary
           />
         )}
         

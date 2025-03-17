@@ -31,6 +31,10 @@ export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
       characterExists: !!character,
       characterName: character?.name, 
       hasImageUrl: !!character?.imageUrl,
+      imageUrlType: character?.imageUrl ? 
+        (character.imageUrl.includes('cloudinary') ? 'cloudinary' : 
+         character.imageUrl.includes('together') ? 'together' : 'other') : 'none',
+      imageUrl: character?.imageUrl?.substring(0, 50),
       title, 
       loading 
     });
@@ -39,7 +43,7 @@ export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
   // Reset error state when character changes
   useEffect(() => {
     if (character) setImgError(false);
-  }, [character?.name]);
+  }, [character?.imageUrl]);
   
   // Use the character's image URL if available - handle null value
   const avatarUrl = !imgError && character?.imageUrl ? character.imageUrl : null;
@@ -82,6 +86,7 @@ export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
                     console.error(`Header image error for ${displayName}:`, e);
                     setImgError(true);
                   }}
+                  unoptimized // Add this to avoid Next.js image optimization issues with Cloudinary
                   priority
                 />
               ) : (
