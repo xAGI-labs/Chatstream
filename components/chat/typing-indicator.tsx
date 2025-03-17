@@ -14,7 +14,6 @@ export function TypingIndicator() {
           <div className="w-2 h-2 rounded-full bg-primary/40 animate-pulse" 
                style={{ animationDuration: "1.2s", animationDelay: "600ms" }}></div>
         </div>
-        <span className="text-xs text-muted-foreground">Typing...</span>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/sidebar/sidebar"
 import { ChatHeader } from "@/components/chat/chat-header"
 import { ChatMessages } from "@/components/chat/chat-messages"
 import { ChatInput } from "@/components/chat/chat-input"
+import { ChatModeSwitcher, ChatMode } from "@/components/chat/chat-mode-switcher"
 import { useConversation } from "@/hooks/use-conversation"
 
 export default function ChatPage() {
@@ -14,6 +15,7 @@ export default function ChatPage() {
   const { userId } = useAuth()
   const { conversation, messages, sendMessage, loading } = useConversation(chatId as string)
   const [isWaiting, setIsWaiting] = useState(false)
+  const [chatMode, setChatMode] = useState<ChatMode>("text")
   
   // Debug conversation data
   useEffect(() => {
@@ -83,6 +85,13 @@ export default function ChatPage() {
           loading={!!loading} // Ensure it's boolean
         />
         
+        {/* Mode Switcher - now positioned below header */}
+        <div className="bg-background/50 backdrop-blur-sm border-b border-border/40 py-2">
+          <div className="container max-w-4xl mx-auto px-4">
+            <ChatModeSwitcher mode={chatMode} setMode={setChatMode} />
+          </div>
+        </div>
+        
         {/* Messages Area */}
         <div className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0 overflow-y-auto">
@@ -104,6 +113,7 @@ export default function ChatPage() {
           disabled={loading === true} // Ensure boolean type
           isWaiting={!!isWaiting} // Ensure boolean type
           setIsWaiting={setIsWaiting}
+          mode={chatMode}
         />
       </div>
     </div>
