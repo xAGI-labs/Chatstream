@@ -112,7 +112,7 @@ export function ChatMessages({
   return (
     <div 
       ref={containerRef} 
-      className="flex flex-col space-y-1 py-3 px-4 sm:px-8 md:px-36 overflow-y-auto h-full scrollbar-thin"
+      className="flex flex-col space-y-1 py-3 px-4 sm:px-8 md:px-46 overflow-y-auto h-full scrollbar-thin"
     >
       {Object.entries(messagesByDate).map(([date, dateMessages], dateIndex) => (
         <div key={date} className="flex flex-col space-y-3">
@@ -164,7 +164,7 @@ export function ChatMessages({
                 {/* Message bubble */}
                 <div 
                   className={cn(
-                    "rounded-2xl px-4 py-2 text-sm shadow-sm",
+                    "rounded-2xl px-4 py-2 text-md shadow-sm",
                     message.role === "user" 
                       ? "bg-primary text-primary-foreground rounded-tr-none" 
                       : "bg-card rounded-tl-none"
