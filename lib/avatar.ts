@@ -301,25 +301,14 @@ export async function generateAvatar(
     
     console.log("Generating avatar for:", name);
     
-    const response = await axios.post(
-      "https://api.together.xyz/v1/images/generations",
-      {
-        model: "black-forest-labs/FLUX.1-dev",
-        prompt,
-        width: 256,
-        height: 256,
-        steps: 28,
-        n: 1,
-        response_format: "url"
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.TOGETHER_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 20000
-      }
-    );
+    // Use the worker URL instead of calling Together API directly
+    const encodedPrompt = encodeURIComponent(prompt);
+    const workerUrl = `https://placeholder.sauravalgs.workers.dev/together?prompt=${encodedPrompt}`;
+    
+    console.log(`Calling worker URL: ${workerUrl}`);
+    const response = await axios.get(workerUrl, {
+      timeout: 20000
+    });
     
     // Reset consecutive rate limits on success
     consecutiveRateLimits = 0;

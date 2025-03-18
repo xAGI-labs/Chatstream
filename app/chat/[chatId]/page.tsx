@@ -70,7 +70,7 @@ export default function ChatPage() {
         : undefined);
   
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/20">
+    <div className="flex h-screen overflow-hidden bg-muted/10">
       {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
@@ -85,15 +85,15 @@ export default function ChatPage() {
           loading={!!loading} // Ensure it's boolean
         />
         
-        {/* Mode Switcher - now positioned below header */}
-        <div className="bg-background/50 backdrop-blur-sm border-b border-border/40 py-2">
+        {/* Mode Switcher - now positioned below header with improved styling */}
+        <div className="bg-background/70 backdrop-blur-sm border-b border-border/40 py-1.5 shadow-sm">
           <div className="container max-w-4xl mx-auto px-4">
             <ChatModeSwitcher mode={chatMode} setMode={setChatMode} />
           </div>
         </div>
         
-        {/* Messages Area */}
-        <div className="flex-1 overflow-hidden relative">
+        {/* Messages Area with gradient background for visual interest */}
+        <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-background to-background/95">
           <div className="absolute inset-0 overflow-y-auto">
             <ChatMessages 
               messages={messages} 

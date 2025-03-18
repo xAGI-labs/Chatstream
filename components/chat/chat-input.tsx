@@ -95,7 +95,7 @@ export function ChatInput({
                 type="button" 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
                 disabled={disabled}
               >
                 <PlusCircle className="h-[18px] w-[18px]" />
@@ -109,7 +109,7 @@ export function ChatInput({
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
               className={cn(
-                "flex-1 resize-none bg-transparent border-0 shadow-none focus-visible:ring-0 pl-14 pr-12 py-3 min-h-[50px] max-h-[120px]"
+                "flex-1 resize-none bg-transparent border-0 shadow-none focus-visible:ring-0 pl-14 pr-12 py-3 min-h-[50px] max-h-[120px] text-base"
               )}
               rows={rows}
               disabled={disabled || isSubmitting}
@@ -130,11 +130,11 @@ export function ChatInput({
                   "h-8 w-8 rounded-full transition-all flex items-center justify-center",
                   isActionDisabled 
                     ? "bg-muted hover:bg-muted text-muted-foreground"
-                    : "bg-primary hover:bg-primary/90"
+                    : "bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg"
                 )}
                 disabled={isActionDisabled}
               >
-                <Send className="h-[18px] w-[18px]" />
+                <Send className={cn("h-[18px] w-[18px]", isActionDisabled ? "" : "animate-pulse")} />
               </Button>
             </div>
           </>
@@ -176,17 +176,17 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 py-3">
+    <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 py-2.5 shadow-lg">
       <form 
         onSubmit={handleSubmit} 
         className="container max-w-4xl mx-auto px-4"
       >
-        <div className="relative flex items-end rounded-2xl border bg-background shadow-sm">
+        <div className="relative flex items-end rounded-2xl border bg-background shadow-sm overflow-hidden transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20">
           {renderInput()}
         </div>
         
-        <div className="mt-2 px-1">
-          <p className="text-[10px] text-center text-muted-foreground/80">
+        <div className="mt-1.5 px-1">
+          <p className="text-[10px] text-center text-muted-foreground/70">
             Responses are AI-generated. Messages may be reviewed to improve our systems.
           </p>
         </div>

@@ -69,7 +69,7 @@ export function ChatModeSwitcher({ mode, setMode }: ChatModeSwitcherProps) {
                 isComingSoon && "hover:text-foreground"
               )}
               onClick={() => !isDisabled && handleModeChange(item.id)}
-              disabled={item.id === "video" /* fully disable only video */}
+              disabled={item.id === "video" }
             >
               {isActive && !isDisabled && (
                 <motion.div
