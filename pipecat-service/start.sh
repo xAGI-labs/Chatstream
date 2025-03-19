@@ -21,6 +21,18 @@ if [ -z "$OPENAI_API_KEY" ]; then
     fi
 fi
 
-# Start the FastAPI server
-echo "Starting voice service on port 8000..."
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+# Output environment information (useful for debugging)
+echo "Environment: $ENVIRONMENT"
+echo "Environment variables available to the application:"
+echo "- OPENAI_API_KEY: ${OPENAI_API_KEY:0:3}... (partially hidden for security)"
+# Add any other important environment variables here
+
+# Start the FastAPI server - in Docker we don't need --reload
+# Use --reload only in development environments
+if [ "$ENVIRONMENT" = "development" ]; then
+    echo "Starting voice service on port 8000 with hot reload..."
+    uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+else
+    echo "Starting voice service on port 8000 in production mode..."
+    uvicorn app:app --host 0.0.0.0 --port 8000
+fi
