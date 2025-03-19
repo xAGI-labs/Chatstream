@@ -212,6 +212,27 @@
   textarea {
     transition: height 0.1s ease;
   }
+
+  /* Enhance glow effect for voice mode */
+  .glow-effect {
+    box-shadow: 0 0 25px 5px rgba(168, 85, 247, 0.4);
+    animation: pulse-gradient 3s infinite ease-in-out;
+  }
+
+  @keyframes pulse-gradient {
+    0% {
+      box-shadow: 0 0 25px 5px rgba(99, 102, 241, 0.3);
+    }
+    33% {
+      box-shadow: 0 0 30px 8px rgba(168, 85, 247, 0.5);
+    }
+    66% {
+      box-shadow: 0 0 35px 5px rgba(236, 72, 153, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 25px 5px rgba(99, 102, 241, 0.3);
+    }
+  }
 }
 
 

@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { MessageSquare, Mic, Video } from "lucide-react"
+import { MessageSquare, Mic, Video, Image } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react"
 
-export type ChatMode = "text" | "voice" | "video"
+export type ChatMode = "text" | "voice" | "video" | "image"
 
 interface ChatModeSwitcherProps {
   mode: ChatMode
@@ -24,32 +24,34 @@ interface ModeItem {
 }
 
 export function ChatModeSwitcher({ mode, setMode }: ChatModeSwitcherProps) {
-  // Handle mode change
+  const modes: ModeItem[] = [
+    {
+      id: "text",
+      label: "Text",
+      icon: MessageSquare,
+      available: true
+    },
+    {
+      id: "voice",
+      label: "Voice",
+      icon: Mic,
+      available: true
+    },
+    {
+      id: "video",
+      label: "Video",
+      icon: Video,
+      available: false,
+      comingSoon: true
+    }
+  ]
+
   const handleModeChange = (newMode: ChatMode) => {
-    if (newMode === "voice") {
-      toast.info("Voice Mode Coming Soon", {
-        description: "We're working on adding voice capabilities!"
-      })
-      return
-    }
-    
-    if (newMode === "video") {
-      // Don't show toast for video as it's completely disabled
-      return
-    }
-    
     setMode(newMode)
   }
 
-  // Properly typed modes array
-  const modes: ModeItem[] = [
-    { id: "text", label: "Text", icon: MessageSquare, available: true, comingSoon: false },
-    { id: "voice", label: "Voice", icon: Mic, available: false, comingSoon: true },
-    { id: "video", label: "Video", icon: Video, available: false, comingSoon: false },
-  ]
-  
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center sticky top-0 z-10 py-2 bg-background/80 backdrop-blur-sm">
       <div className="inline-flex rounded-lg bg-muted/40 p-1 shadow-sm">
         {modes.map((item) => {
           const isActive = mode === item.id

@@ -11,110 +11,76 @@ import { ChatModeSwitcher, ChatMode } from "@/components/chat/chat-mode-switcher
 import { useConversation } from "@/hooks/use-conversation"
 
 export default function ChatPage() {
-  const { chatId } = useParams()
-  const { userId } = useAuth()
-  const { conversation, messages, sendMessage, loading } = useConversation(chatId as string)
+  const params = useParams()
+  const chatId = params?.chatId as string
+  const { isLoaded, isSignedIn } = useAuth()
   const [isWaiting, setIsWaiting] = useState(false)
-  const [chatMode, setChatMode] = useState<ChatMode>("text")
+  const [mode, setMode] = useState<ChatMode>("text")
+  const [isAISpeaking, setIsAISpeaking] = useState(false)
   
-  // Debug conversation data
-  useEffect(() => {
-    if (conversation) {
-      console.log("Chat Page - Conversation data:", {
-        id: conversation.id,
-        title: conversation.title,
-        hasCharacter: !!conversation.character,
-        characterId: conversation.characterId,
-        characterName: conversation.character?.name,
-        messagesCount: messages.length
-      });
-      
-      // Log warning if character data is missing
-      if (!conversation.character) {
-        console.warn("Chat Page - Character data missing in conversation", { 
-          conversationId: conversation.id,
-          characterId: conversation.characterId 
-        });
-      }
+  const { conversation, messages, loading, sendMessage, sendAIMessage } = useConversation(chatId)
+  
+  const handleSendMessage = async (content: string, isUserMessage: boolean = true) => {
+    setIsWaiting(true)
+    
+    if (isUserMessage) {
+      await sendMessage(content)
+    } else {
+      await sendAIMessage(content)
     }
-  }, [conversation, messages]);
-
-  // Authentication check
-  if (!userId) {
+    
+    setIsWaiting(false)
+  }
+  
+  if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="bg-card p-8 rounded-xl shadow-lg text-center max-w-md">
-          <h2 className="text-2xl font-semibold mb-4">Sign In Required</h2>
-          <p className="text-muted-foreground mb-6">Please sign in to access your conversations.</p>
-          <a href="/" className="bg-primary text-primary-foreground px-6 py-3 rounded-lg inline-block hover:bg-primary/90 transition-colors">
-            Return to Home
-          </a>
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-4 border-muted-foreground/30 border-t-primary animate-spin" />
+          <p className="text-sm text-muted-foreground animate-pulse">Loading conversation...</p>
         </div>
       </div>
     )
   }
   
-  // Prepare character data for components with proper type handling
-  const characterData = conversation?.character 
-    ? {
-        name: conversation.character.name,
-        // Convert null to undefined for imageUrl to satisfy ChatHeader props
-        imageUrl: conversation.character.imageUrl || undefined
-      }
-    : (conversation?.characterId 
-        ? {
-            id: conversation.characterId,
-            name: "AI Assistant", // Placeholder name while character loads
-            imageUrl: undefined
-          } 
-        : undefined);
+  // Properly convert any potential null or empty values to boolean
+  const isLoadingState = loading === true
+  const isDisabledState = loading === true
   
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/10">
-      {/* Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-      
-      {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 overflow-hidden relative">
-        {/* Chat Header - pass loading as boolean */}
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         <ChatHeader 
-          character={characterData}
-          title={conversation?.title}
-          loading={!!loading} // Ensure it's boolean
+          title={conversation?.title} 
+          character={conversation?.character} 
+          loading={isLoadingState} 
         />
-        
-        {/* Mode Switcher - now positioned below header with improved styling */}
-        <div className="bg-background/70 backdrop-blur-sm border-b border-border/40 py-1.5 shadow-sm">
-          <div className="container max-w-4xl mx-auto px-4">
-            <ChatModeSwitcher mode={chatMode} setMode={setChatMode} />
-          </div>
+        <div className="border-t border-border px-4 py-2">
+          <ChatModeSwitcher mode={mode} setMode={setMode} />
         </div>
-        
-        {/* Messages Area with gradient background for visual interest */}
-        <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-background to-background/95">
-          <div className="absolute inset-0 overflow-y-auto">
-            <ChatMessages 
-              messages={messages} 
-              loading={loading === true} // Ensure boolean type
-              isWaiting={!!isWaiting} // Ensure boolean type
-              character={characterData}
-            />
-          </div>
+
+        <div className="flex-1 overflow-y-auto py-4 px-4">
+          <ChatMessages 
+            messages={messages} 
+            loading={isLoadingState} 
+            isWaiting={isWaiting}
+            character={conversation?.character}
+            mode={mode}
+            isAISpeaking={isAISpeaking}
+          />
         </div>
-        
-        {/* Chat Input */}
-        <ChatInput 
-          onSend={async (content) => {
-            await sendMessage(content)
-            setIsWaiting(false)
-          }}
-          disabled={loading === true} // Ensure boolean type
-          isWaiting={!!isWaiting} // Ensure boolean type
-          setIsWaiting={setIsWaiting}
-          mode={chatMode}
-        />
+        <div className="p-4">
+          <ChatInput 
+            onSend={handleSendMessage} 
+            disabled={isDisabledState}
+            isWaiting={isWaiting} 
+            setIsWaiting={setIsWaiting}
+            mode={mode}
+            characterId={conversation?.characterId || ""}
+            setIsAISpeaking={setIsAISpeaking}
+          />
+        </div>
       </div>
     </div>
   )

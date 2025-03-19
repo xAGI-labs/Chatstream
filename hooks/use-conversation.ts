@@ -154,9 +154,59 @@ export function useConversation(chatId: string) {
       })
     }
   }
+
+  // New function to handle AI messages directly
+  const sendAIMessage = async (content: string) => {
+    if (!userId || !chatId || !content.trim()) return
+    
+    // Create an AI message
+    const aiMessage: Message = {
+      id: `temp-ai-${Date.now()}`,
+      content,
+      role: "assistant",
+      createdAt: new Date(),
+      conversationId: chatId
+    }
+    
+    // Add the AI message to the conversation
+    setMessages(prev => [...prev, aiMessage])
+    
+    try {
+      // Optionally save the AI message to the database
+      const response = await fetch(`/api/conversations/${chatId}/messages/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to save AI message: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      // Replace the temporary AI message with the saved one
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== aiMessage.id)
+        return [...filtered, data.aiMessage]
+      })
+    } catch (error) {
+      console.error("Error saving AI message:", error)
+      // Keep the message in UI but show a subtle warning
+      toast.error("Message saved locally only", {
+        description: "Could not save to server"
+      })
+    }
+  }
   
   // Include characterLoading in the overall loading state
   const isLoading = loading || (characterId && characterLoading);
   
-  return { conversation, messages, sendMessage, loading: isLoading }
+  return { 
+    conversation, 
+    messages, 
+    sendMessage, 
+    sendAIMessage, // Add the new function to the return value
+    loading: isLoading 
+  }
 }
