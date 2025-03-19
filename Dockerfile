@@ -1,10 +1,5 @@
 # Use an official lightweight Node.js image
 FROM node:18-alpine AS builder
-
-# Set environment variables inside Dockerfile
-ENV CLERK_PUBLISHABLE_KEY="your-clerk-publishable-key"
-ENV OPENAI_API_KEY="your-openai-api-key"
-
 # Set working directory inside the container
 WORKDIR /app
 
