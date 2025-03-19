@@ -141,6 +141,17 @@ export function VoiceChat({
       })
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`Voice processing error: ${errorText}`)
+        
+        // Check for specific error types
+        if (errorText.includes("invalid_api_key") || errorText.includes("OpenAI API key")) {
+          toast.error("Voice service configuration error", {
+            description: "The OpenAI API key isn't configured correctly. Please contact support."
+          })
+          throw new Error("OpenAI API key configuration issue")
+        }
+        
         throw new Error(`Error: ${response.status} ${response.statusText}`)
       }
       
@@ -148,8 +159,17 @@ export function VoiceChat({
       
       // Play the audio response
       if (data.audio_data && audioRef.current) {
+        // Set AI speaking state if available
+        if (setIsAISpeaking) setIsAISpeaking(true)
+        
         audioRef.current.src = data.audio_data
-        audioRef.current.play()
+        audioRef.current.onended = () => {
+          if (setIsAISpeaking) setIsAISpeaking(false)
+        }
+        audioRef.current.play().catch(err => {
+          console.error("Error playing audio:", err)
+          if (setIsAISpeaking) setIsAISpeaking(false)
+        })
       }
       
       // Send both user text and AI response to chat
@@ -163,11 +183,18 @@ export function VoiceChat({
         onMessageSent(data.ai_text, false) // false indicates it's an AI message
       }
       
-    } catch (error) {
+    } catch (error: unknown) { // Add explicit type annotation for error
       console.error("Error processing voice:", error)
-      toast.error("Error processing voice", {
-        description: "Please try again"
-      })
+      
+      // Safely check the error message by type guarding
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Don't display double toast if already handled above
+      if (!errorMessage.includes("API key")) {
+        toast.error("Error processing voice", {
+          description: "Please try again or contact support if the problem persists"
+        })
+      }
     } finally {
       setIsProcessing(false)
     }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"  // Fixed import from server
+import { auth } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
@@ -36,8 +36,20 @@ export async function POST(req: Request) {
     serviceFormData.append('audio_file', audioBlob)
     serviceFormData.append('character_id', character.id)
     serviceFormData.append('character_name', character.name)
+    
+    // Add instructions with null check and default value
     serviceFormData.append('character_instructions', 
       character.instructions || `You are ${character.name}. ${character.description || ''}`)
+    
+    // Explicitly pass OpenAI API key from environment to ensure the correct key is used
+    const openaiApiKey = process.env.OPENAI_API_KEY
+    if (!openaiApiKey) {
+      return new NextResponse("OpenAI API key not configured on server", { status: 500 })
+    }
+    
+    serviceFormData.append('openai_api_key', openaiApiKey)
+    
+    console.log("Making voice service request for character:", character.name)
     
     // Call the voice service
     const response = await fetch(`${VOICE_SERVICE_URL}/api/voice/process`, {
