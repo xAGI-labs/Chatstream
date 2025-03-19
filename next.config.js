@@ -36,9 +36,11 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Removed deprecated options:
-  // - swcMinify (now default)
-  // - experimental.appDir (now default in Next.js 15+)
+  // Disable static page generation during build
+  experimental: {
+    // Disable page generation during build phase
+    disableStaticGeneration: process.env.DISABLE_STATIC_GEN === 'true'
+  },
 };
 
 module.exports = nextConfig;
