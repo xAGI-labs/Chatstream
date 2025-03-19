@@ -36,12 +36,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Use proper experimental flag to skip static generation
-  experimental: {
-    // Skip static generation
-    outputFileTracingExcludes: {
-      '*': ['node_modules/**/*']
-    }
+  // Move outputFileTracingExcludes outside of experimental as per warning
+  outputFileTracingExcludes: {
+    '*': ['node_modules/**/*']
   },
 };
 

@@ -4,41 +4,37 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Install dependencies efficiently
 COPY package.json package-lock.json* ./
 RUN npm install --frozen-lockfile
 
-# Copy the rest of the project
 COPY . .
 
-# Pass environment variables at build time
+# Set build-time environment variables
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG OPENAI_API_KEY
 
-# Ensure Next.js can access them
+# Ensure Next.js can access them during build
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV OPENAI_API_KEY=$OPENAI_API_KEY
-# Disable static generation during build
-ENV NEXT_SKIP_RENDER_COMPILATION=true 
+ENV NEXT_SKIP_RENDER_COMPILATION=1
 
-# Generate Prisma Client if using Prisma
+# Generate Prisma Client
 RUN npx prisma generate
 
-# Build the Next.js application with static generation disabled
-RUN npm run build
+# Use the build environment setup script to provide mock values
+# This prevents static generation errors when building without actual keys
+RUN node -e "require('./next-build-env.js'); require('child_process').execSync('npm run build', {stdio: 'inherit'});"
 
-# Use a smaller base image for the production container
 FROM node:18-alpine AS runner
 
-# Set environment variables again for runtime
+# Set runtime environment variables
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 ENV OPENAI_API_KEY=${OPENAI_API_KEY}
 
-# Set working directory
 WORKDIR /app
 
-# Copy built files from the builder stage
+# Copy only necessary files to reduce image size
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
@@ -46,7 +42,6 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Expose the port the app runs on
 EXPOSE 3000
 
 # Start the application
