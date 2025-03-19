@@ -1,41 +1,40 @@
-# Use the official Node.js 18 Alpine image
+# Use official Node.js image
 FROM node:18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Install necessary dependencies
+# Install dependencies
 RUN apk add --no-cache wget bash
 
-# Copy package files first (for caching layers)
+# Copy package files
 COPY package.json package-lock.json* ./
 
 # Install dependencies
 RUN npm install --frozen-lockfile
 
-# Copy the rest of the application files
+# Copy entire project
 COPY . .
 
-# Generate Prisma client (if using Prisma)
+# **Make sure environment variables are available during build**
+ARG OPENAI_API_KEY
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+
+# Generate Prisma client
 RUN npx prisma generate
 
 # Build Next.js application
 RUN npm run build
 
-# Remove development dependencies to reduce image size
-RUN npm prune --production
-
-# Final stage - Create a smaller production image
+# Production image
 FROM node:18-alpine AS runner
-
-# Set working directory
 WORKDIR /app
 
-# Copy built files from the builder stage
-COPY --from=builder /app ./
+# Copy built project from builder
+COPY --from=builder /app /app
 
-# Expose the Next.js default port
+# Expose port
 EXPOSE 3000
 
-# Start the Next.js application
+# Start app
 CMD ["npm", "run", "start"]
