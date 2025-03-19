@@ -1,71 +1,41 @@
-FROM node:18-alpine AS base
+# Use the official Node.js 18 Alpine image
+FROM node:18-alpine AS builder
 
-# Install dependencies only when needed
-FROM base AS deps
+# Set working directory
 WORKDIR /app
+
+# Install necessary dependencies
+RUN apk add --no-cache wget bash
+
+# Copy package files first (for caching layers)
 COPY package.json package-lock.json* ./
-# Use npm install instead of npm ci to update the lock file
-RUN npm install
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Install dependencies
+RUN npm install --frozen-lockfile
+
+# Copy the rest of the application files
 COPY . .
 
-# Set dummy environment variables for build time
-ENV OPENAI_API_KEY="sk-dummy-api-key-for-build"
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
-ENV CLERK_SECRET_KEY="sk_test_dummy_clerk_secret_key_for_build"
-ENV TOGETHER_API_KEY="dummy_together_api_key"
-ENV CLOUDINARY_API_KEY="dummy_cloudinary_key"
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_dummy_clerk_publishable_key_for_build"
-
-# Disable static generation during build to avoid Clerk authentication issues
-ENV DISABLE_STATIC_GEN="true"
-
-# Generate Prisma client before building
+# Generate Prisma client (if using Prisma)
 RUN npx prisma generate
 
-# Create a temporary ClerkProvider wrapper to bypass Clerk authentication during build
-RUN mkdir -p /app/components/build-utils
-RUN echo 'export const ClerkProvider = ({ children }) => <>{children}</>;' > /app/components/build-utils/clerk-mock.js
-
-# Now build the application
+# Build Next.js application
 RUN npm run build
 
-# Remove the temporary ClerkProvider wrapper after build
-RUN rm -rf /app/components/build-utils
+# Remove development dependencies to reduce image size
+RUN npm prune --production
 
-# Production image, copy all the files and run next
-FROM base AS runner
+# Final stage - Create a smaller production image
+FROM node:18-alpine AS runner
+
+# Set working directory
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV DISABLE_STATIC_GEN="false"
+# Copy built files from the builder stage
+COPY --from=builder /app ./
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
-
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/next.config.js ./next.config.js
-# Copy Prisma schema and generated client
-COPY --from=builder /app/prisma ./prisma
-
-# Add non-root user for security
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
-    chown -R nextjs:nodejs /app
-USER nextjs
-
+# Expose the Next.js default port
 EXPOSE 3000
 
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
-
-# Actual API keys will be provided at runtime via environment variables
-CMD ["npm", "start"]
+# Start the Next.js application
+CMD ["npm", "run", "start"]
