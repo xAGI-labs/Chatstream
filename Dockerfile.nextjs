@@ -12,12 +12,25 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Set a default value for the env variable to prevent undefined variable error
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=""
+
+# Set dummy environment variables for build time
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_dummy_value"
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+ENV OPENAI_API_KEY="sk-dummy-api-key-for-build"
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
+ENV CLERK_SECRET_KEY="dummy_clerk_secret"
+ENV TOGETHER_API_KEY="dummy_together_api_key"
+ENV CLOUDINARY_API_KEY="dummy_cloudinary_key"
 
 # Generate Prisma client before building
 RUN npx prisma generate
+
+# Create a .env.production file to allow Next.js to build without real API access
+RUN echo "OPENAI_API_KEY=sk-dummy-api-key-for-build" > .env.production
+RUN echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy_value" >> .env.production
+
+# Set Next.js build mode to skip API checks
+ENV NEXT_SKIP_API_LINK_VALIDATION=true
 
 # Now build the application
 RUN npm run build
@@ -51,4 +64,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
+# Actual API keys will be provided at runtime via environment variables
 CMD ["npm", "start"]
