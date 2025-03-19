@@ -13,6 +13,10 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      # Add missing Cloudinary variables
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_UPLOAD_PRESET=${CLOUDINARY_UPLOAD_PRESET}
     depends_on:
       - pipecat-service
 
