@@ -14,26 +14,27 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set dummy environment variables for build time
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_dummy_value"
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 ENV OPENAI_API_KEY="sk-dummy-api-key-for-build"
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 ENV CLERK_SECRET_KEY="dummy_clerk_secret"
 ENV TOGETHER_API_KEY="dummy_together_api_key"
 ENV CLOUDINARY_API_KEY="dummy_cloudinary_key"
+# Use real publishable key format that Clerk accepts
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_Y2xlcmsuZXhhbXBsZS5jb20k"
 
 # Generate Prisma client before building
 RUN npx prisma generate
 
 # Create a .env.production file to allow Next.js to build without real API access
 RUN echo "OPENAI_API_KEY=sk-dummy-api-key-for-build" > .env.production
-RUN echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy_value" >> .env.production
+RUN echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuZXhhbXBsZS5jb20k" >> .env.production
 
-# Set Next.js build mode to skip API checks
+# Set Next.js build options to avoid API validations and static generation issues
 ENV NEXT_SKIP_API_LINK_VALIDATION=true
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Now build the application
-RUN npm run build
+# Now build the application with export disabled to avoid static generation
+RUN npm run build -- --no-export
 
 # Production image, copy all the files and run next
 FROM base AS runner
