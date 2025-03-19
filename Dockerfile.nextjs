@@ -15,6 +15,11 @@ COPY . .
 # Set a default value for the env variable to prevent undefined variable error
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=""
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+
+# Generate Prisma client before building
+RUN npx prisma generate
+
+# Now build the application
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -31,6 +36,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./next.config.js
+# Copy Prisma schema and generated client
+COPY --from=builder /app/prisma ./prisma
 
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
