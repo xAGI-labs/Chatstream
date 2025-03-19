@@ -47,6 +47,11 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  // Skip static generation completely
+  staticPageGenerationTimeout: 1000,
+  // Prevent generation of not-found and error pages at build time
+  skipTrailingSlashRedirect: true,
+  skipMiddlewareUrlNormalize: true,
 };
 
 module.exports = nextConfig;

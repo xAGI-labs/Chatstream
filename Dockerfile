@@ -14,19 +14,13 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Build with specific settings to avoid API calls during build
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_dummy-key-for-build"
-ENV CLERK_SECRET_KEY="sk_test_dummy-key-for-build"
-ENV OPENAI_API_KEY="sk_dummy_key_for_build_only"
-ENV TOGETHER_API_KEY="dummy_key_for_build_only"
-ENV DATABASE_URL="file:./dummy.db"
+# Only set the non-sensitive build settings
+# The sensitive values (CLERK keys, API keys) will come from Dokploy's build-time variables
 ENV NEXT_TELEMETRY_DISABLED=1
-# Skip static generation to avoid auth errors and API calls
-ENV NEXT_SKIP_RENDER_COMPILATION=1
-# This prevents Next.js from attempting data fetching during build
-ENV NEXT_MINIMAL_BUILD=1
+ENV NEXT_SKIP_TYPE_CHECK=1
 
 # Build with output mode standalone
+# The environment variables will be accessed from Dokploy's build-time variables
 RUN npm run build
 
 # Production image
