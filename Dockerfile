@@ -1,14 +1,23 @@
 # Use an official lightweight Node.js image
 FROM node:18-alpine AS builder
-# Set working directory inside the container
+
+# Set working directory
 WORKDIR /app
 
 # Install dependencies efficiently
 COPY package.json package-lock.json* ./
 RUN npm install --frozen-lockfile
 
-# Copy the entire project
+# Copy the rest of the project
 COPY . .
+
+# Pass environment variables at build time
+ARG CLERK_PUBLISHABLE_KEY
+ARG OPENAI_API_KEY
+
+# Ensure Next.js can access them
+ENV CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Generate Prisma Client if using Prisma
 RUN npx prisma generate
@@ -20,14 +29,14 @@ RUN npm run build
 FROM node:18-alpine AS runner
 
 # Set environment variables again for runtime
-ENV CLERK_PUBLISHABLE_KEY="pk_test_dGhhbmtmdWwtdXJjaGluLTM5LmNsZXJrLmFjY291bnRzLmRldiQ"
-ENV OPENAI_API_KEY="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"
 ENV NODE_ENV=production
+ENV CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Set working directory
 WORKDIR /app
 
-# Copy built files from the previous stage
+# Copy built files from the builder stage
 COPY --from=builder /app ./
 
 # Expose the port the app runs on
