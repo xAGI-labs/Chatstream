@@ -39,9 +39,10 @@ const nextConfig = {
   outputFileTracingExcludes: {
     '*': ['node_modules/**/*']
   },
+  // Updated from serverComponentsExternalPackages to serverExternalPackages
+  serverExternalPackages: ['@prisma/client', 'bcrypt'],
   // Increase timeout for API routes to prevent socket hangups
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
     serverActions: {
       bodySizeLimit: '2mb',
     },
