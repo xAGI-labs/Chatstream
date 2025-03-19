@@ -11,9 +11,8 @@ const nextConfig = {
       'res.cloudinary.com',
       'dht33kdwe.cloudinary.com',
     ],
-    unoptimized: process.env.NODE_ENV === 'production',
+    unoptimized: process.env.NODE_ENV !== 'production',
   },
-  // Enable standalone output for Nixpacks deployment
   output: 'standalone',
   // Avoid CORS issues with API routes
   async headers() {
@@ -39,6 +38,13 @@ const nextConfig = {
   // Move outputFileTracingExcludes outside of experimental as per warning
   outputFileTracingExcludes: {
     '*': ['node_modules/**/*']
+  },
+  // Increase timeout for API routes to prevent socket hangups
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client', 'bcrypt'],
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 };
 
