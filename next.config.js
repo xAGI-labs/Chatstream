@@ -8,8 +8,8 @@ const nextConfig = {
       'together.xyz',
       'api.together.xyz',
       'api.together.ai',
-      'res.cloudinary.com', // Ensure this is present
-      'dht33kdwe.cloudinary.com', // Add this specific Cloudinary subdomain
+      'res.cloudinary.com',
+      'dht33kdwe.cloudinary.com',
     ],
     unoptimized: process.env.NODE_ENV === 'production',
   },
@@ -36,10 +36,12 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Disable static page generation during build
+  // Use proper experimental flag to skip static generation
   experimental: {
-    // Disable page generation during build phase
-    disableStaticGeneration: process.env.DISABLE_STATIC_GEN === 'true'
+    // Skip static generation
+    outputFileTracingExcludes: {
+      '*': ['node_modules/**/*']
+    }
   },
 };
 
