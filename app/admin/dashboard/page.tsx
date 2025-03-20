@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { AdminAuthProvider, useAdminAuth } from "@/lib/admin-auth"
@@ -17,13 +17,73 @@ import {
   Shield, 
   Home,
   LogOut,
-  UserCircle
+  UserCircle,
+  Loader2
 } from "lucide-react"
+
+// Dashboard stats interface
+interface DashboardStats {
+  totalUsers: number;
+  totalCharacters: number;
+  totalConversations: number;
+  userGrowth: number;
+  characterGrowth: number;
+  conversationGrowth: number;
+  systemStatus: {
+    apiResponseTime: string;
+    databaseLoad: string;
+    storageUsage: string;
+    errorRate: string;
+  };
+  isLoading: boolean;
+}
 
 function AdminDashboardContent() {
   const { logout } = useAdminAuth()
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'characters' | 'content'>('overview')
   const router = useRouter()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalCharacters: 0,
+    totalConversations: 0,
+    userGrowth: 0,
+    characterGrowth: 0,
+    conversationGrowth: 0,
+    systemStatus: {
+      apiResponseTime: "0ms",
+      databaseLoad: "0%",
+      storageUsage: "0%",
+      errorRate: "0%"
+    },
+    isLoading: true
+  })
+
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      fetchDashboardStats();
+    }
+  }, [activeTab]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setStats(prevStats => ({ ...prevStats, isLoading: true }));
+      const response = await fetch('/api/admin/dashboard/stats');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard statistics');
+      }
+      
+      const data = await response.json();
+      setStats({
+        ...data,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      toast.error('Failed to load dashboard statistics');
+      setStats(prevStats => ({ ...prevStats, isLoading: false }));
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -39,9 +99,11 @@ function AdminDashboardContent() {
     router.push('/')
   }
 
-  const navigateToCharacters = () => {
-    setActiveTab('characters')
-  }
+  const handleRefresh = () => {
+    if (activeTab === 'overview') {
+      fetchDashboardStats();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -116,87 +178,115 @@ function AdminDashboardContent() {
       
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <header className="p-4 border-b bg-background/80 backdrop-blur sticky top-0 z-10">
+        <header className="p-4 border-b bg-background/80 backdrop-blur sticky top-0 z-10 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{
             activeTab === 'overview' ? 'Dashboard Overview' :
             activeTab === 'users' ? 'User Management' :
             activeTab === 'characters' ? 'Character Management' :
             'Content Moderation'
           }</h1>
+          
+          {activeTab === 'overview' && (
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={stats.isLoading}>
+              {stats.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh Data"}
+            </Button>
+          )}
         </header>
         
         <main className="p-6">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
             <TabsContent value="overview">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>Total Users</CardTitle>
-                    <CardDescription>Active users in the platform</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">1,234</div>
-                    <div className="text-xs text-muted-foreground mt-1">+12% from last month</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>Characters</CardTitle>
-                    <CardDescription>Total AI characters created</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">356</div>
-                    <div className="text-xs text-muted-foreground mt-1">+7% from last month</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle>Conversations</CardTitle>
-                    <CardDescription>Total conversations started</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">5,678</div>
-                    <div className="text-xs text-muted-foreground mt-1">+32% from last month</div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="md:col-span-2">
-                  <CardHeader>
-                    <CardTitle>User Growth</CardTitle>
-                    <CardDescription>New users over time</CardDescription>
-                  </CardHeader>
-                  <CardContent className="h-[280px] flex items-center justify-center bg-muted/30 rounded-md">
-                    <p className="text-muted-foreground">Chart placeholder</p>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>System Status</CardTitle>
-                    <CardDescription>Current system health</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span>API Response Time</span>
-                      <span className="text-green-500">120ms</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Database Load</span>
-                      <span className="text-green-500">23%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Storage Usage</span>
-                      <span className="text-amber-500">68%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Error Rate</span>
-                      <span className="text-green-500">0.4%</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              {stats.isLoading ? (
+                <div className="flex items-center justify-center h-[60vh]">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                    <p className="mt-4 text-muted-foreground">Loading dashboard statistics...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle>Total Users</CardTitle>
+                      <CardDescription>Active users in the platform</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+                      <div className={`text-xs mt-1 ${stats.userGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {stats.userGrowth > 0 ? '+' : ''}{stats.userGrowth}% from last month
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle>Characters</CardTitle>
+                      <CardDescription>Total AI characters created</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{stats.totalCharacters.toLocaleString()}</div>
+                      <div className={`text-xs mt-1 ${stats.characterGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {stats.characterGrowth > 0 ? '+' : ''}{stats.characterGrowth}% from last month
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle>Conversations</CardTitle>
+                      <CardDescription>Total conversations started</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{stats.totalConversations.toLocaleString()}</div>
+                      <div className={`text-xs mt-1 ${stats.conversationGrowth >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {stats.conversationGrowth > 0 ? '+' : ''}{stats.conversationGrowth}% from last month
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="md:col-span-2">
+                    <CardHeader>
+                      <CardTitle>User Growth</CardTitle>
+                      <CardDescription>New users over time</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[280px] flex items-center justify-center bg-muted/30 rounded-md">
+                      {/* We'll implement actual chart in a future update */}
+                      <p className="text-muted-foreground">User growth data available: {stats.totalUsers} users</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>System Status</CardTitle>
+                      <CardDescription>Current system health</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span>API Response Time</span>
+                        <span className="text-green-500">{stats.systemStatus.apiResponseTime}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Database Load</span>
+                        <span className={parseFloat(stats.systemStatus.databaseLoad) < 50 ? "text-green-500" : parseFloat(stats.systemStatus.databaseLoad) < 80 ? "text-amber-500" : "text-red-500"}>
+                          {stats.systemStatus.databaseLoad}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Storage Usage</span>
+                        <span className={parseFloat(stats.systemStatus.storageUsage) < 50 ? "text-green-500" : parseFloat(stats.systemStatus.storageUsage) < 80 ? "text-amber-500" : "text-red-500"}>
+                          {stats.systemStatus.storageUsage}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Error Rate</span>
+                        <span className={parseFloat(stats.systemStatus.errorRate) < 1 ? "text-green-500" : parseFloat(stats.systemStatus.errorRate) < 5 ? "text-amber-500" : "text-red-500"}>
+                          {stats.systemStatus.errorRate}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="users">
