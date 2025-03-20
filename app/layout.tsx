@@ -1,11 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { ClerkProvider } from "@clerk/nextjs"
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css"
 import "../styles/clerk.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { SafeClerkProvider } from "@/lib/conditional-auth";
 
 export const metadata: Metadata = {
   title: "Charstream | AI Characters",
@@ -28,28 +28,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
-        <ClerkProvider>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
+        <SafeClerkProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
-            enableSystem={false}
-            storageKey="chatstream-theme"
+            enableSystem
           >
             {children}
-            <Toaster 
-              position="top-center"
-              toastOptions={{
-                style: {
-                  background: "#333",
-                  color: "#fff",
-                  border: "1px solid #444",
-                }
-              }}
-            />
+            <Toaster position="bottom-right" />
           </ThemeProvider>
-        </ClerkProvider>
+        </SafeClerkProvider>
       </body>
     </html>
   )

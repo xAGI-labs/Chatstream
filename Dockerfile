@@ -14,22 +14,12 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-# These dummy variables are necessary even if build-time variables are set in Dokploy
-# They ensure the build process has fallbacks and prevent API calls during static generation
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_dummy-key-for-build"
-ENV CLERK_SECRET_KEY="sk_test_dummy-key-for-build"
-ENV OPENAI_API_KEY="sk_dummy_key_for_build_only"
-ENV TOGETHER_API_KEY="dummy_key_for_build_only"
-ENV DATABASE_URL="file:./dummy.db"
+# Set minimal environment variables needed for build
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Critical build settings to skip problematic operations
-ENV NEXT_SKIP_RENDER_COMPILATION=1
-ENV SKIP_BUILD_STATIC_GENERATION=1
 ENV NEXT_SKIP_TYPE_CHECK=1
-
-# Create a mock.js file to handle API mocking during build
-RUN echo "/* Mock file to prevent API calls during build */\nexport default function mockAPI() { return { text: () => Promise.resolve('') }; }" > ./lib/mock-api.js
+ENV NEXT_SKIP_RENDER_COMPILATION=1
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="dummy_for_build"
+ENV CLERK_SECRET_KEY="dummy_for_build"
 
 # Build with output mode standalone
 RUN npm run build

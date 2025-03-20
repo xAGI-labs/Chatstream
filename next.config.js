@@ -46,20 +46,12 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Skip API route collection during build
+    // Disable optimized loading to avoid issues
     disableOptimizedLoading: true,
   },
-  // Completely skip static page generation
-  staticPageGenerationTimeout: 1,
-  // Skip middleware and not-found pages
+  // Critical setting to prevent static generation of not-found and other problematic pages
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
-  // Eliminate as much static generation as possible
-  optimizeFonts: false,
-  // Disable data collection during build
-  compiler: {
-    reactRemoveProperties: process.env.NODE_ENV === 'production',
-  },
 };
 
 module.exports = nextConfig;

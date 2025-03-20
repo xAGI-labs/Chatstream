@@ -1,6 +1,13 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
 
-export default clerkMiddleware()
+// Skip the middleware during build
+const isBuild = process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
+
+// Use a dummy middleware during build to avoid errors
+const buildMiddleware = (req: Request) => new Response(null);
+
+// Export the appropriate middleware function
+export default isBuild ? buildMiddleware : clerkMiddleware();
 
 export const config = {
   matcher: [
