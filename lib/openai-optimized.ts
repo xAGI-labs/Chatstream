@@ -1,3 +1,9 @@
+// Import our build-safe implementation
+import { getOpenAIClient as getSafeClient } from './openai-build-safe';
+
+// Re-export the safer version
+export const getOpenAIClient = getSafeClient;
+
 import OpenAI from 'openai';
 
 // Initialize OpenAI client once

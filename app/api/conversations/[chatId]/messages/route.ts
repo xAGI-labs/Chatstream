@@ -3,16 +3,40 @@ import { NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
 import { generateCharacterResponse } from "@/lib/chat-helpers"
+import { getOpenAIClient } from "@/lib/openai-build-safe" // Import the build-safe version
+
+// Check if we're in a build environment
+const isBuildEnv = typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
 
 const prisma = new PrismaClient()
 
 // Type for the context parameter with generic params
 type RouteContext<T> = { params: T }
 
+export async function GET(
+  req: Request,
+  context: { params: { chatId: string } }
+) {
+  // During build, return a mock response
+  if (isBuildEnv) {
+    return NextResponse.json({ messages: [] });
+  }
+  
+  // ... existing code ...
+}
+
 export async function POST(
   req: Request,
   context: { params: { chatId: string } }
 ) {
+  // During build, return a mock response
+  if (isBuildEnv) {
+    return NextResponse.json({ 
+      userMessage: { id: 'mock', content: 'Mock message', role: 'user', createdAt: new Date() },
+      aiMessage: { id: 'mock', content: 'Mock response', role: 'assistant', createdAt: new Date() }
+    });
+  }
+  
   try {
     const { userId } = await auth();
     
@@ -87,6 +111,9 @@ export async function POST(
     let aiResponse = "I'm sorry, I couldn't generate a response.";
     
     try {
+      // Use the build-safe client
+      const openai = getOpenAIClient();
+      
       // Format recent messages for context
       const recentMessages = conversation.messages
         .slice(-5)
