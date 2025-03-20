@@ -5,10 +5,25 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { AdminAuthProvider, useAdminAuth } from "@/lib/admin-auth"
 import { withAdminAuth } from "@/lib/with-admin-auth"
+import { useRouter } from "next/navigation"
+import { CharacterManagement } from "@/components/admin/character-management"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+  BarChart3, 
+  Users, 
+  MessageSquare, 
+  Settings, 
+  Shield, 
+  Home,
+  LogOut,
+  UserCircle
+} from "lucide-react"
 
 function AdminDashboardContent() {
   const { logout } = useAdminAuth()
-  const [activeTab, setActiveTab] = useState<'users' | 'content' | 'stats'>('users')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'characters' | 'content'>('overview')
+  const router = useRouter()
 
   const handleLogout = async () => {
     try {
@@ -20,98 +35,203 @@ function AdminDashboardContent() {
     }
   }
 
+  const navigateToHome = () => {
+    router.push('/')
+  }
+
+  const navigateToCharacters = () => {
+    setActiveTab('characters')
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6">
-        <header className="flex justify-between items-center mb-8 pb-4 border-b">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
-        </header>
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <div className="w-64 border-r bg-sidebar text-sidebar-foreground p-4 flex flex-col">
+        <div className="mb-8 flex items-center gap-2 px-2">
+          <Shield className="h-6 w-6" />
+          <h1 className="text-xl font-bold">Admin Panel</h1>
+        </div>
         
-        {/* Tab Navigation */}
-        <div className="flex border-b mb-6">
-          <button 
-            className={`px-4 py-2 font-medium ${activeTab === 'users' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+        <div className="space-y-1">
+          <Button 
+            variant={activeTab === 'overview' ? "sidebar-primary" : "sidebar"} 
+            className="w-full justify-start" 
+            onClick={() => setActiveTab('overview')}
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Overview
+          </Button>
+          <Button 
+            variant={activeTab === 'users' ? "sidebar-primary" : "sidebar"} 
+            className="w-full justify-start" 
             onClick={() => setActiveTab('users')}
           >
+            <Users className="h-4 w-4 mr-2" />
             Users
-          </button>
-          <button 
-            className={`px-4 py-2 font-medium ${activeTab === 'content' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
+          </Button>
+          <Button 
+            variant={activeTab === 'characters' ? "sidebar-primary" : "sidebar"} 
+            className="w-full justify-start" 
+            onClick={() => setActiveTab('characters')}
+          >
+            <UserCircle className="h-4 w-4 mr-2" />
+            Characters
+          </Button>
+          <Button 
+            variant={activeTab === 'content' ? "sidebar-primary" : "sidebar"} 
+            className="w-full justify-start"
             onClick={() => setActiveTab('content')}
           >
+            <MessageSquare className="h-4 w-4 mr-2" />
             Content
-          </button>
-          <button 
-            className={`px-4 py-2 font-medium ${activeTab === 'stats' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab('stats')}
+          </Button>
+          <Button 
+            variant="sidebar" 
+            className="w-full justify-start"
           >
-            Statistics
-          </button>
+            <Settings className="h-4 w-4 mr-2" />
+            Settings
+          </Button>
         </div>
         
-        {/* Tab Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeTab === 'users' && (
-            <>
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">User Management</h2>
-                <p className="text-muted-foreground mb-4">Manage user accounts and permissions.</p>
-                <Button variant="secondary" size="sm">View Users</Button>
-              </div>
-              
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">User Roles</h2>
-                <p className="text-muted-foreground mb-4">Manage roles and access levels.</p>
-                <Button variant="secondary" size="sm">Manage Roles</Button>
-              </div>
-            </>
-          )}
-          
-          {activeTab === 'content' && (
-            <>
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">Character Management</h2>
-                <p className="text-muted-foreground mb-4">Manage AI characters in the system.</p>
-                <Button variant="secondary" size="sm">Manage Characters</Button>
-              </div>
-              
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">Content Moderation</h2>
-                <p className="text-muted-foreground mb-4">Review and moderate user-generated content.</p>
-                <Button variant="secondary" size="sm">Review Content</Button>
-              </div>
-            </>
-          )}
-          
-          {activeTab === 'stats' && (
-            <>
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">User Statistics</h2>
-                <p className="text-muted-foreground mb-4">View user activity and engagement metrics.</p>
-                <div className="h-40 flex items-center justify-center bg-muted/30 rounded-md">
-                  <p className="text-muted-foreground">Chart placeholder</p>
-                </div>
-              </div>
-              
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">System Performance</h2>
-                <p className="text-muted-foreground mb-4">Monitor system health and performance.</p>
-                <div className="h-40 flex items-center justify-center bg-muted/30 rounded-md">
-                  <p className="text-muted-foreground">Chart placeholder</p>
-                </div>
-              </div>
-              
-              <div className="bg-card border border-border p-6 rounded-lg shadow-sm">
-                <h2 className="text-xl font-semibold mb-4">API Usage</h2>
-                <p className="text-muted-foreground mb-4">Track API usage and costs.</p>
-                <div className="h-40 flex items-center justify-center bg-muted/30 rounded-md">
-                  <p className="text-muted-foreground">Chart placeholder</p>
-                </div>
-              </div>
-            </>
-          )}
+        <div className="mt-auto space-y-1">
+          <Button 
+            variant="sidebar" 
+            className="w-full justify-start"
+            onClick={navigateToHome}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Back to Site
+          </Button>
+          <Button 
+            variant="sidebar" 
+            className="w-full justify-start"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <header className="p-4 border-b bg-background/80 backdrop-blur sticky top-0 z-10">
+          <h1 className="text-2xl font-bold">{
+            activeTab === 'overview' ? 'Dashboard Overview' :
+            activeTab === 'users' ? 'User Management' :
+            activeTab === 'characters' ? 'Character Management' :
+            'Content Moderation'
+          }</h1>
+        </header>
+        
+        <main className="p-6">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+            <TabsContent value="overview">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle>Total Users</CardTitle>
+                    <CardDescription>Active users in the platform</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">1,234</div>
+                    <div className="text-xs text-muted-foreground mt-1">+12% from last month</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle>Characters</CardTitle>
+                    <CardDescription>Total AI characters created</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">356</div>
+                    <div className="text-xs text-muted-foreground mt-1">+7% from last month</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle>Conversations</CardTitle>
+                    <CardDescription>Total conversations started</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">5,678</div>
+                    <div className="text-xs text-muted-foreground mt-1">+32% from last month</div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle>User Growth</CardTitle>
+                    <CardDescription>New users over time</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[280px] flex items-center justify-center bg-muted/30 rounded-md">
+                    <p className="text-muted-foreground">Chart placeholder</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Status</CardTitle>
+                    <CardDescription>Current system health</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span>API Response Time</span>
+                      <span className="text-green-500">120ms</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Database Load</span>
+                      <span className="text-green-500">23%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Storage Usage</span>
+                      <span className="text-amber-500">68%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Error Rate</span>
+                      <span className="text-green-500">0.4%</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="users">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>Manage user accounts and permissions</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px] flex items-center justify-center bg-muted/30 rounded-md">
+                    <p className="text-muted-foreground">User table placeholder - Coming soon</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="characters">
+              <CharacterManagement />
+            </TabsContent>
+            
+            <TabsContent value="content">
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Content Moderation</CardTitle>
+                    <CardDescription>Review and moderate conversations</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-[400px] flex items-center justify-center bg-muted/30 rounded-md">
+                    <p className="text-muted-foreground">Content moderation tools - Coming soon</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </main>
       </div>
     </div>
   )
