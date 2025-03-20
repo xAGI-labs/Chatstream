@@ -14,15 +14,12 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Set critical environment variables for build
+# Essential environment variables - minimal set to avoid static generation
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_SKIP_TYPE_CHECK=1
+# Critical: Skip static generation entirely
 ENV NEXT_SKIP_RENDER_COMPILATION=1
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="dummy_for_build"
-ENV CLERK_SECRET_KEY="dummy_for_build"
-ENV OPENAI_API_KEY="dummy_for_build"
-ENV TOGETHER_API_KEY="dummy_for_build"
-ENV DATABASE_URL="file:./dummy.db"
+ENV SKIP_BUILD_STATIC_GENERATION=1
 
 # Build with output mode standalone
 RUN npm run build

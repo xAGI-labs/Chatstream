@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useAuth } from "@clerk/nextjs"
+import { useAuth, useUser } from "@clerk/nextjs"
 import SignupDialog from "@/components/signup-dialog"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
 import { Sidebar } from "@/components/sidebar/sidebar"
@@ -13,9 +13,25 @@ import { CreateCharacterSection } from "@/components/create-character-section"
 // import { popularCharacters, educationalCharacters } from "@/components/characters/character-data"
 import { preloadDefaultAvatars } from "@/lib/preload-avatars"
 
-export default function Home() {
+export default function HomePage() {
+  // Check if we're in a build environment
+  const isBuildEnv = typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
+  
+  // During build, render a minimal version without hooks that require auth
+  if (isBuildEnv) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1>ChatStream Loading...</h1>
+        <p>The application will load properly at runtime.</p>
+      </div>
+    )
+  }
+  
+  // For runtime, use the normal component with authentication
+  const { isSignedIn, user } = useUser()
+
   const { isOpen, setIsOpen } = useSignupDialog()
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded } = useAuth()
 
   useEffect(() => {
     // Show sign-up dialog only if user is not signed in

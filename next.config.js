@@ -41,15 +41,17 @@ const nextConfig = {
   },
   // Updated from serverComponentsExternalPackages to serverExternalPackages
   serverExternalPackages: ['@prisma/client', 'bcrypt'],
-  // Increase timeout for API routes to prevent socket hangups
+  // Experimental settings
   experimental: {
+    // This is the critical option to disable static generation
+    disableStaticGeneration: true,
+    // Disable optimized loading to avoid issues
+    disableOptimizedLoading: true,
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Disable optimized loading to avoid issues
-    disableOptimizedLoading: true,
   },
-  // Critical setting to prevent static generation of not-found and other problematic pages
+  // Skip trailing slash redirects
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
 };
