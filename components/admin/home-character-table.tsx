@@ -80,9 +80,8 @@ export function HomeCharacterTable({ searchQuery }: HomeCharacterTableProps) {
   const [totalPages, setTotalPages] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
-  const [editCharacter, setEditCharacter] = useState<HomeCharacter | null>(null)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [regeneratingImageId, setRegeneratingImageId] = useState<string | null>(null)
+  const [editingCharacter, setEditingCharacter] = useState<HomeCharacter | null>(null)
   const pageSize = 10
   const router = useRouter()
 
@@ -145,8 +144,7 @@ export function HomeCharacterTable({ searchQuery }: HomeCharacterTableProps) {
   }
 
   const handleEditClick = (character: HomeCharacter) => {
-    setEditCharacter(character)
-    setEditDialogOpen(true)
+    setEditingCharacter(character)
   }
 
   const handleRegenerateImage = async (id: string) => {
@@ -308,14 +306,13 @@ export function HomeCharacterTable({ searchQuery }: HomeCharacterTableProps) {
       )}
 
       {/* Edit Dialog */}
-      {editCharacter && (
+      {editingCharacter && (
         <EditHomeCharacterDialog
-          character={editCharacter}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
+          character={editingCharacter}
+          onClose={() => setEditingCharacter(null)}
           onSuccess={() => {
+            setEditingCharacter(null)
             fetchCharacters()
-            setEditCharacter(null)
           }}
         />
       )}
@@ -351,26 +348,16 @@ export function HomeCharacterTable({ searchQuery }: HomeCharacterTableProps) {
 
 interface EditHomeCharacterDialogProps {
   character: HomeCharacter
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
   onSuccess: () => void
 }
 
-function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: EditHomeCharacterDialogProps) {
+function EditHomeCharacterDialog({ character, onClose, onSuccess }: EditHomeCharacterDialogProps) {
   const [name, setName] = useState(character.name)
   const [description, setDescription] = useState(character.description || "")
   const [category, setCategory] = useState(character.category)
-  const [displayOrder, setDisplayOrder] = useState(character.displayOrder.toString())
+  const [displayOrder, setDisplayOrder] = useState(character.displayOrder || 0)
   const [isLoading, setIsLoading] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setName(character.name)
-      setDescription(character.description || "")
-      setCategory(character.category)
-      setDisplayOrder(character.displayOrder.toString())
-    }
-  }, [character, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -388,9 +375,9 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          description: description || null,
+          description,
           category,
-          displayOrder: parseInt(displayOrder)
+          displayOrder
         })
       })
       
@@ -400,7 +387,6 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
       }
       
       toast.success("Character updated successfully")
-      onOpenChange(false)
       onSuccess()
       
     } catch (error: any) {
@@ -411,24 +397,21 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
   }
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (isLoading) return
-      onOpenChange(newOpen)
-    }}>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Home Character</DialogTitle>
           <DialogDescription>
-            Update the character details
+            Update details for this home page character
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-name">Name*</Label>
+              <Label htmlFor="name">Name*</Label>
               <Input
-                id="edit-name"
+                id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Character name"
@@ -438,9 +421,9 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
-                id="edit-description"
+                id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe your character"
@@ -450,9 +433,9 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="edit-category">Category*</Label>
+              <Label htmlFor="category">Category*</Label>
               <select
-                id="edit-category"
+                id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 disabled={isLoading}
@@ -464,19 +447,16 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="edit-display-order">Display Order*</Label>
+              <Label htmlFor="displayOrder">Display Order</Label>
               <Input
-                id="edit-display-order"
+                id="displayOrder"
                 type="number"
+                min="0"
                 value={displayOrder}
-                onChange={(e) => setDisplayOrder(e.target.value)}
+                onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
                 placeholder="Display order"
                 disabled={isLoading}
-                required
               />
-              <p className="text-xs text-muted-foreground">
-                Lower numbers appear first. Popular characters typically use 0-99, educational 100+
-              </p>
             </div>
           </div>
           
@@ -484,7 +464,7 @@ function EditHomeCharacterDialog({ character, open, onOpenChange, onSuccess }: E
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => onOpenChange(false)}
+              onClick={onClose}
               disabled={isLoading}
             >
               Cancel

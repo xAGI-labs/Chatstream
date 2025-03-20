@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { cookies } from "next/headers"
-import { generateAvatar } from "@/lib/avatar"
 
 const prisma = new PrismaClient()
 
 // Admin authentication middleware
 async function verifyAdminAuth() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const token = cookieStore.get('admin_token')?.value
 
   if (!token) {
     return false
   }
 
-  // Verify the token (simplified check for example purposes)
-  // In a real implementation, you would verify the token more securely
+  // Verify the token (simplified check)
   return token.length > 0
 }
 
@@ -59,8 +57,12 @@ export async function PATCH(
     }
 
     const { id } = params
-    const body = await req.json()
-    const { name, description, category, displayOrder } = body
+    const { name, description, category, displayOrder } = await req.json()
+    
+    // Validate inputs
+    if (!name) {
+      return new NextResponse("Name is required", { status: 400 })
+    }
     
     // Check if character exists
     const character = await prisma.homeCharacter.findUnique({
@@ -75,16 +77,16 @@ export async function PATCH(
     const updatedCharacter = await prisma.homeCharacter.update({
       where: { id },
       data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(category && { category }),
-        ...(displayOrder !== undefined && { displayOrder })
+        name,
+        description,
+        category: category || character.category,
+        displayOrder: displayOrder !== undefined ? displayOrder : character.displayOrder
       }
     })
     
     return NextResponse.json(updatedCharacter)
   } catch (error) {
-    console.error("[ADMIN_HOME_CHARACTER_PATCH]", error)
+    console.error("[ADMIN_HOME_CHARACTER_UPDATE]", error)
     return new NextResponse("Internal error", { status: 500 })
   }
 }

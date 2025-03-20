@@ -79,3 +79,48 @@ export async function DELETE(
     return new NextResponse("Internal error", { status: 500 })
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verify admin authentication
+    const isAdmin = await verifyAdminAuth()
+    if (!isAdmin) {
+      return new NextResponse("Unauthorized", { status: 401 })
+    }
+
+    const { id } = params
+    const { name, description, isPublic } = await req.json()
+    
+    // Validate inputs
+    if (!name) {
+      return new NextResponse("Name is required", { status: 400 })
+    }
+    
+    // Check if character exists
+    const character = await prisma.character.findUnique({
+      where: { id }
+    })
+    
+    if (!character) {
+      return new NextResponse("Character not found", { status: 404 })
+    }
+    
+    // Update the character
+    const updatedCharacter = await prisma.character.update({
+      where: { id },
+      data: {
+        name,
+        description,
+        isPublic: isPublic === undefined ? character.isPublic : isPublic,
+      }
+    })
+    
+    return NextResponse.json(updatedCharacter)
+  } catch (error) {
+    console.error("[ADMIN_CHARACTER_UPDATE]", error)
+    return new NextResponse("Internal error", { status: 500 })
+  }
+}

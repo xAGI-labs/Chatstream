@@ -49,11 +49,15 @@ import {
   Loader2, 
   Image as ImageIcon, 
   RefreshCw,
-  AlertCircle 
+  AlertCircle,
+  Pencil 
 } from "lucide-react"
 import { toast } from "sonner"
 import NextImage from "next/image"
 import { useRouter } from "next/navigation"
+import { Label } from "../ui/label"
+import { Textarea } from "../ui/textarea"
+import { Input } from "../ui/input"
 
 interface Character {
   id: string
@@ -77,6 +81,7 @@ export function CharacterTable({ searchQuery }: CharacterTableProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [regeneratingImageId, setRegeneratingImageId] = useState<string | null>(null)
+  const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const pageSize = 10
   const router = useRouter()
 
@@ -169,6 +174,10 @@ export function CharacterTable({ searchQuery }: CharacterTableProps) {
     }
   }
 
+  const handleEditClick = (character: Character) => {
+    setEditingCharacter(character)
+  }
+
   if (loading && characters.length === 0) {
     return (
       <div className="h-96 flex items-center justify-center">
@@ -238,6 +247,12 @@ export function CharacterTable({ searchQuery }: CharacterTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => handleEditClick(character)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleRegenerateImage(character.id)}
                         disabled={regeneratingImageId === character.id}
@@ -326,6 +341,144 @@ export function CharacterTable({ searchQuery }: CharacterTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Character Dialog */}
+      {editingCharacter && (
+        <EditCharacterDialog 
+          character={editingCharacter} 
+          onClose={() => setEditingCharacter(null)} 
+          onSuccess={() => {
+            setEditingCharacter(null)
+            fetchCharacters()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+interface EditCharacterDialogProps {
+  character: Character
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function EditCharacterDialog({ character, onClose, onSuccess }: EditCharacterDialogProps) {
+  const [name, setName] = useState(character.name)
+  const [description, setDescription] = useState(character.description || "")
+  const [isPublic, setIsPublic] = useState(character.isPublic)
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!name) {
+      toast.error("Name is required")
+      return
+    }
+    
+    try {
+      setIsLoading(true)
+      
+      const response = await fetch(`/api/admin/characters/${character.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          description,
+          isPublic
+        })
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Failed to update character: ${errorText || response.statusText}`)
+      }
+      
+      toast.success("Character updated successfully")
+      onSuccess()
+      
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update character")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Character</DialogTitle>
+          <DialogDescription>
+            Update details for this character
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Name*</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Character name"
+                disabled={isLoading}
+                required
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe your character"
+                disabled={isLoading}
+                className="h-20"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPublic"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                disabled={isLoading}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="isPublic">Public character</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={!name || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
