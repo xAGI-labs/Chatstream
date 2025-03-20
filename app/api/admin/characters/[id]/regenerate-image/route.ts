@@ -14,8 +14,7 @@ async function verifyAdminAuth() {
     return false
   }
 
-  // Verify the token (simplified check for example purposes)
-  // In a real implementation, you would verify the token more securely
+  // Verify the token (simplified check)
   return token.length > 0
 }
 
@@ -42,29 +41,40 @@ export async function POST(
     }
     
     // Generate new avatar
-    let imageUrl = ""
     try {
       console.log(`Regenerating avatar for ${character.name}...`)
       const generatedUrl = await generateAvatar(character.name, character.description || undefined)
+      
       if (generatedUrl) {
-        imageUrl = generatedUrl
-        
         // Update the character with new image
-        await prisma.character.update({
+        const updatedCharacter = await prisma.character.update({
           where: { id },
-          data: { imageUrl }
+          data: { imageUrl: generatedUrl }
         })
         
-        return NextResponse.json({ success: true, imageUrl })
+        return NextResponse.json({ 
+          success: true, 
+          imageUrl: generatedUrl,
+          message: "Character image updated successfully"
+        })
       } else {
-        return new NextResponse("Failed to generate image", { status: 500 })
+        return NextResponse.json({
+          success: false,
+          message: "Failed to generate image"
+        }, { status: 500 })
       }
     } catch (error) {
       console.error(`Failed to regenerate avatar for ${character.name}:`, error)
-      return new NextResponse("Error generating image", { status: 500 })
+      return NextResponse.json({
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown error generating image"
+      }, { status: 500 })
     }
   } catch (error) {
     console.error("[ADMIN_CHARACTER_REGENERATE_IMAGE]", error)
-    return new NextResponse("Internal error", { status: 500 })
+    return NextResponse.json({
+      success: false,
+      message: "Internal server error"
+    }, { status: 500 })
   }
 }

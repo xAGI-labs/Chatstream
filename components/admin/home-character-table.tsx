@@ -156,16 +156,25 @@ export function HomeCharacterTable({ searchQuery }: HomeCharacterTableProps) {
       })
       
       if (!response.ok) {
-        throw new Error("Failed to regenerate image")
+        const errorData = await response.text();
+        throw new Error(`Failed to regenerate image: ${errorData}`);
       }
       
-      toast.success("Image regeneration initiated")
-      fetchCharacters()
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success("Image successfully regenerated");
+      } else {
+        toast.warning("Image regeneration completed with issues");
+      }
+      
+      // Refresh the character list to show the updated image
+      await fetchCharacters();
     } catch (error) {
-      console.error("Error regenerating image:", error)
-      toast.error("Failed to regenerate image")
+      console.error("Error regenerating image:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to regenerate image");
     } finally {
-      setRegeneratingImageId(null)
+      setRegeneratingImageId(null);
     }
   }
 

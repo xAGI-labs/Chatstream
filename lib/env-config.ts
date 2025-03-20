@@ -13,6 +13,9 @@ export const serverEnv = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   TOGETHER_API_KEY: process.env.TOGETHER_API_KEY,
   
+  // Image generation worker
+  IMAGE_GENERATION_WORKER_URL: process.env.IMAGE_GENERATION_WORKER_URL || 'https://api.together.xyz/v1/images/generations',
+  
   // Cloudinary configuration
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || 'dht33kdwe',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
@@ -56,7 +59,8 @@ export function validateServerEnv(): string[] {
   const recommended = [
     'OPENAI_API_KEY',
     'TOGETHER_API_KEY',
-    'CLOUDINARY_API_KEY'
+    'CLOUDINARY_API_KEY',
+    'IMAGE_GENERATION_WORKER_URL'
   ];
   
   // Log warnings for recommended variables
