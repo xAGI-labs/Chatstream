@@ -41,10 +41,8 @@ const nextConfig = {
   },
   // Updated from serverComponentsExternalPackages to serverExternalPackages
   serverExternalPackages: ['@prisma/client', 'bcrypt'],
-  // Experimental settings
+  // Experimental settings - removing disableStaticGeneration which is not recognized
   experimental: {
-    // This is the critical option to disable static generation
-    disableStaticGeneration: true,
     // Disable optimized loading to avoid issues
     disableOptimizedLoading: true,
     serverActions: {

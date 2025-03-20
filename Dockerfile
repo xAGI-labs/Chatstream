@@ -14,12 +14,8 @@ COPY . .
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Essential environment variables - minimal set to avoid static generation
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_SKIP_TYPE_CHECK=1
-# Critical: Skip static generation entirely
-ENV NEXT_SKIP_RENDER_COMPILATION=1
-ENV SKIP_BUILD_STATIC_GENERATION=1
+# Our build script will set the necessary environment variables internally
+# No need to set them here anymore
 
 # Build with output mode standalone
 RUN npm run build

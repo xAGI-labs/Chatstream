@@ -6,9 +6,10 @@ import { generateCharacterResponse } from "@/lib/chat-helpers"
 import { getOpenAIClient } from "@/lib/openai-build-safe" // Import the build-safe version
 
 // Check if we're in a build environment
-const isBuildEnv = typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
+const isBuildTime = typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
 
-const prisma = new PrismaClient()
+// Only initialize Prisma client if not in build time
+const prisma = isBuildTime ? null : new PrismaClient();
 
 // Type for the context parameter with generic params
 type RouteContext<T> = { params: T }
@@ -18,7 +19,7 @@ export async function GET(
   context: { params: { chatId: string } }
 ) {
   // During build, return a mock response
-  if (isBuildEnv) {
+  if (isBuildTime) {
     return NextResponse.json({ messages: [] });
   }
   
@@ -30,7 +31,7 @@ export async function POST(
   context: { params: { chatId: string } }
 ) {
   // During build, return a mock response
-  if (isBuildEnv) {
+  if (isBuildTime) {
     return NextResponse.json({ 
       userMessage: { id: 'mock', content: 'Mock message', role: 'user', createdAt: new Date() },
       aiMessage: { id: 'mock', content: 'Mock response', role: 'assistant', createdAt: new Date() }

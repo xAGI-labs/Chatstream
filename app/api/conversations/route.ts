@@ -8,7 +8,11 @@ import { enrichCharacterDescription, generateDetailedInstructions } from "@/lib/
 import axios from "axios"
 import { ensureUserExists } from "@/lib/user-sync"
 
-const prisma = new PrismaClient()
+// Check if we're in a build environment to avoid API calls during build
+const isBuildTime = typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.NEXT_RUNTIME;
+
+// Only initialize Prisma client if not in build time
+const prisma = isBuildTime ? null : new PrismaClient();
 
 // Type definition for combined characters
 type AnyCharacter = {
@@ -24,6 +28,18 @@ type AnyCharacter = {
 const defaultCharacters = [...popularCharacters, ...educationalCharacters];
 
 export async function POST(req: Request) {
+  // During build time, return a mock response
+  if (isBuildTime) {
+    return NextResponse.json({
+      id: "mock-conversation-id",
+      title: "Mock Conversation",
+      character: { 
+        id: "mock-character-id", 
+        name: "Mock Character" 
+      }
+    });
+  }
+
   try {
     const { userId } = await auth()
     
@@ -216,6 +232,19 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
+  // During build time, return a mock response
+  if (isBuildTime) {
+    return NextResponse.json([{
+      id: "mock-conversation-id",
+      title: "Mock Conversation",
+      character: { 
+        id: "mock-character-id", 
+        name: "Mock Character" 
+      },
+      updatedAt: new Date()
+    }]);
+  }
+
   try {
     const { userId } = await auth()
     
