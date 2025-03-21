@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { ChatMode } from "./chat-mode-switcher"
 import { VoiceChat } from "./voice-chat"
 import { VoiceInteraction } from "./voice-interaction"
+import { VoiceInteractionContinuous } from "./voice-interaction-continuous"
 
 interface ChatInputProps {
   onSend: (content: string, isUserMessage?: boolean) => Promise<void>;
@@ -39,6 +40,7 @@ export function ChatInput({
   const [recordingTime, setRecordingTime] = useState(0);
   const [lastUserMessage, setLastUserMessage] = useState("");
   const [lastAIMessage, setLastAIMessage] = useState("");
+  const [callActive, setCallActive] = useState(false);
   
   // Add debugging
   useEffect(() => {
@@ -104,6 +106,26 @@ export function ChatInput({
     if (aiMsg) setLastAIMessage(aiMsg);
   };
   
+  // Handle interrupt functionality
+  const handleInterrupt = () => {
+    // Find the VoiceChat component via ref and call its interruptAI method
+    if (voiceChatRef.current?.interruptAI) {
+      voiceChatRef.current.interruptAI();
+    }
+  };
+  
+  // Handle end call
+  const handleEndCall = () => {
+    // Find the VoiceChat component via ref and call its endCall method
+    if (voiceChatRef.current?.endCall) {
+      voiceChatRef.current.endCall();
+      setCallActive(false);
+    }
+  };
+  
+  // Create a ref to the VoiceChat component
+  const voiceChatRef = useRef<any>(null);
+  
   // Different input based on mode
   const renderInput = () => {
     if (mode === "voice") {
@@ -117,11 +139,13 @@ export function ChatInput({
       return (
         <div className="flex w-full items-center justify-center py-4">
           <VoiceChat 
+            ref={voiceChatRef}
             disabled={disabled}
             characterId={characterId}
             onMessageSent={onSend}
             isWaiting={isWaiting}
             onVoiceStateChange={handleVoiceStateChange}
+            onCallActiveChange={setCallActive}
           />
         </div>
       )
@@ -165,17 +189,38 @@ export function ChatInput({
 
   return (
     <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 py-2.5 shadow-lg">
-      {/* Voice interaction UI overlay - only shown in voice mode */}
-      {mode === "voice" && (isRecording || isProcessing || isResponding) && (
-        <VoiceInteraction
-          isRecording={isRecording}
-          isProcessing={isProcessing}
-          isResponding={isResponding}
-          recordingTime={recordingTime}
-          characterName={characterId ? "AI Assistant" : undefined}
-          lastUserMessage={lastUserMessage}
-          lastAIMessage={lastAIMessage}
-        />
+      {/* Voice interaction UI overlay - conditional on mode */}
+      {mode === "voice" && (
+        <>
+          {/* Traditional voice interaction for single messages */}
+          {(isRecording || isProcessing || isResponding) && !callActive && (
+            <VoiceInteraction
+              isRecording={isRecording}
+              isProcessing={isProcessing}
+              isResponding={isResponding}
+              recordingTime={recordingTime}
+              characterName={characterId ? "AI Assistant" : undefined}
+              lastUserMessage={lastUserMessage}
+              lastAIMessage={lastAIMessage}
+            />
+          )}
+          
+          {/* Continuous voice interaction for call-like experience */}
+          {callActive && (
+            <VoiceInteractionContinuous
+              isRecording={isRecording}
+              isProcessing={isProcessing}
+              isResponding={isResponding}
+              recordingTime={recordingTime}
+              characterName={characterId ? "AI Assistant" : undefined}
+              lastUserMessage={lastUserMessage}
+              lastAIMessage={lastAIMessage}
+              callActive={callActive}
+              onInterrupt={handleInterrupt}
+              onEndCall={handleEndCall}
+            />
+          )}
+        </>
       )}
       
       <form 

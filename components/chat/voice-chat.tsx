@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react"
 import { Button } from "@/components/ui/button"
-import { Mic, Square, Loader2 } from "lucide-react"
+import { Mic, Square, Loader2, Volume2, PhoneOff, Repeat } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 interface VoiceChatProps {
   characterId: string;
@@ -20,30 +22,41 @@ interface VoiceChatProps {
     userMessage?: string,
     aiMessage?: string
   ) => void;
+  onCallActiveChange?: (active: boolean) => void;
 }
 
-export function VoiceChat({ 
+interface VoiceChatMethods {
+  interruptAI: () => void;
+  endCall: () => void;
+}
+
+export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({ 
   characterId, 
   onMessageSent, 
   disabled,
   isWaiting,
-  onVoiceStateChange
-}: VoiceChatProps) {
+  onVoiceStateChange,
+  onCallActiveChange
+}, ref) => {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isResponding, setIsResponding] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [lastUserMessage, setLastUserMessage] = useState("")
   const [lastAIMessage, setLastAIMessage] = useState("")
+  const [continuousMode, setContinuousMode] = useState(false)
+  const [callActive, setCallActive] = useState(false)
+  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
   const { userId } = useAuth()
 
   // Debug information
   useEffect(() => {
-    console.log("VoiceChat props:", { characterId, disabled, isWaiting })
-  }, [characterId, disabled, isWaiting])
+    console.log("VoiceChat props:", { characterId, disabled, isWaiting, continuousMode, callActive })
+  }, [characterId, disabled, isWaiting, continuousMode, callActive])
 
   // Update the parent component with state changes
   useEffect(() => {
@@ -58,6 +71,19 @@ export function VoiceChat({
       );
     }
   }, [isRecording, isProcessing, isResponding, recordingTime, lastUserMessage, lastAIMessage, onVoiceStateChange]);
+
+  // After responding finishes in continuous mode, start recording again
+  useEffect(() => {
+    if (continuousMode && callActive && !isResponding && !isRecording && !isProcessing) {
+      const timer = setTimeout(() => {
+        if (callActive) {
+          startRecording();
+        }
+      }, 1000); // Small delay before starting to record again
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isResponding, isRecording, isProcessing, continuousMode, callActive]);
 
   const startRecording = async () => {
     try {
@@ -131,7 +157,7 @@ export function VoiceChat({
       const errorMessage = error instanceof Error 
         ? error.message 
         : "Unknown error";
-        
+      
       toast.error("Could not access microphone", {
         description: errorMessage
       })
@@ -220,10 +246,12 @@ export function VoiceChat({
         setIsResponding(true)
         
         const responseAudio = new Audio(data.audio_data)
+        audioPlayerRef.current = responseAudio
         
         // When audio ends, reset responding state and trigger refresh
         responseAudio.addEventListener('ended', async () => {
           setIsResponding(false)
+          audioPlayerRef.current = null
           
           // After audio finishes playing, ensure messages are refreshed
           try {
@@ -266,6 +294,61 @@ export function VoiceChat({
     }
   }
   
+  const interruptAI = () => {
+    // Stop the audio playback
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+      setIsResponding(false);
+      
+      // Small delay before starting to record
+      setTimeout(() => {
+        if (callActive) {
+          startRecording();
+        }
+      }, 300);
+    }
+  }
+  
+  const startCall = () => {
+    setCallActive(true);
+    if (onCallActiveChange) onCallActiveChange(true);
+    startRecording();
+  }
+  
+  const endCall = () => {
+    setCallActive(false);
+    if (onCallActiveChange) onCallActiveChange(false);
+    
+    // Stop recording if active
+    if (isRecording) {
+      stopRecording();
+    }
+    
+    // Stop audio if playing
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+    
+    // Reset states
+    setIsRecording(false);
+    setIsProcessing(false);
+    setIsResponding(false);
+    
+    // Clear timers
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+  
+  // Expose methods via useImperativeHandle
+  useImperativeHandle(ref, () => ({
+    interruptAI,
+    endCall
+  }));
+  
   // Clean up on component unmount or when mode changes
   useEffect(() => {
     return () => {
@@ -277,10 +360,16 @@ export function VoiceChat({
         mediaRecorderRef.current.stop()
       }
       
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+      
       // Reset states
       setIsRecording(false)
       setIsProcessing(false)
       setIsResponding(false)
+      setCallActive(false)
     }
   }, [])
   
@@ -293,48 +382,104 @@ export function VoiceChat({
   
   return (
     <div className="flex flex-col items-center justify-center w-full">
-      {!isRecording ? (
+      <div className="flex items-center gap-2 mb-4">
+        <Switch
+          id="continuous-mode"
+          checked={continuousMode}
+          onCheckedChange={setContinuousMode}
+          disabled={isRecording || isProcessing || isResponding}
+        />
+        <Label htmlFor="continuous-mode" className="text-sm">
+          Continuous conversation
+        </Label>
+      </div>
+      
+      {!callActive ? (
+        // Start call button
         <Button
           type="button"
-          onClick={startRecording}
-          disabled={disabled || isProcessing || isWaiting || isResponding}
+          onClick={startCall}
+          disabled={disabled || isWaiting}
           className={cn(
-            "rounded-full h-14 w-14 bg-primary hover:bg-primary/90 text-primary-foreground",
-            (disabled || isProcessing || isWaiting || isResponding) && "opacity-50 cursor-not-allowed"
+            "rounded-full h-14 w-14 bg-green-500 hover:bg-green-600 text-white",
+            (disabled || isWaiting) && "opacity-50 cursor-not-allowed"
           )}
         >
-          {isProcessing ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            <Mic className="h-6 w-6" />
-          )}
+          <Mic className="h-6 w-6" />
         </Button>
       ) : (
+        // Active call UI
         <div className="flex flex-col items-center">
-          <div className="text-sm font-medium mb-2 text-red-500">
-            {formatTime(recordingTime)}
-          </div>
+          {isRecording ? (
+            // Recording state
+            <div className="flex flex-col items-center">
+              <div className="text-sm font-medium mb-2 text-red-500">
+                {formatTime(recordingTime)}
+              </div>
+              <Button
+                type="button"
+                onClick={stopRecording}
+                className="rounded-full h-14 w-14 bg-red-500 hover:bg-red-600 text-white"
+              >
+                <Square className="h-6 w-6" />
+              </Button>
+            </div>
+          ) : isProcessing ? (
+            // Processing state
+            <Button
+              type="button"
+              disabled={true}
+              className="rounded-full h-14 w-14 bg-primary opacity-70 cursor-not-allowed"
+            >
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </Button>
+          ) : isResponding ? (
+            // AI speaking state - interrupt option
+            <Button
+              type="button"
+              onClick={interruptAI}
+              className="rounded-full h-14 w-14 bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              <Volume2 className="h-6 w-6" />
+            </Button>
+          ) : (
+            // Default active call state - start recording again
+            <Button
+              type="button"
+              onClick={startRecording}
+              className="rounded-full h-14 w-14 bg-green-500 hover:bg-green-600 text-white"
+            >
+              <Repeat className="h-6 w-6" />
+            </Button>
+          )}
+          
+          {/* End call button */}
           <Button
             type="button"
-            onClick={stopRecording}
-            className="rounded-full h-14 w-14 bg-red-500 hover:bg-red-600 text-white"
+            onClick={endCall}
+            className="rounded-full h-10 w-10 bg-red-500 hover:bg-red-600 text-white mt-3"
+            title="End call"
           >
-            <Square className="h-6 w-6" />
+            <PhoneOff className="h-4 w-4" />
           </Button>
         </div>
       )}
       
       <div className="mt-3 text-sm text-muted-foreground text-center">
-        {isRecording ? (
+        {!callActive ? (
+          "Click to start voice call"
+        ) : isRecording ? (
           "Recording... Click to stop"
         ) : isProcessing ? (
           "Processing your message..."
         ) : isResponding ? (
-          "AI is responding..."
+          "AI is speaking... Click to interrupt"
         ) : (
-          "Click to start speaking"
+          "Ready for your next message"
         )}
       </div>
     </div>
-  )
-}
+  );
+});
+
+VoiceChat.displayName = "VoiceChat";
