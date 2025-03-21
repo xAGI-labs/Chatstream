@@ -100,6 +100,7 @@ export default function ChatPage() {
               loading={loading === true} // Ensure boolean type
               isWaiting={!!isWaiting} // Ensure boolean type
               character={characterData}
+              mode={chatMode} // Pass the chat mode to messages component
             />
           </div>
         </div>

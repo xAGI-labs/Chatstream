@@ -12,17 +12,29 @@ interface VoiceChatProps {
   onMessageSent: (content: string, isUserMessage?: boolean) => Promise<void>;
   disabled: boolean;
   isWaiting: boolean;
+  onVoiceStateChange?: (
+    isRecording: boolean, 
+    isProcessing: boolean, 
+    isResponding: boolean,
+    recordingTime?: number,
+    userMessage?: string,
+    aiMessage?: string
+  ) => void;
 }
 
 export function VoiceChat({ 
   characterId, 
   onMessageSent, 
   disabled,
-  isWaiting
+  isWaiting,
+  onVoiceStateChange
 }: VoiceChatProps) {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isResponding, setIsResponding] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [lastUserMessage, setLastUserMessage] = useState("")
+  const [lastAIMessage, setLastAIMessage] = useState("")
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -32,6 +44,20 @@ export function VoiceChat({
   useEffect(() => {
     console.log("VoiceChat props:", { characterId, disabled, isWaiting })
   }, [characterId, disabled, isWaiting])
+
+  // Update the parent component with state changes
+  useEffect(() => {
+    if (onVoiceStateChange) {
+      onVoiceStateChange(
+        isRecording, 
+        isProcessing, 
+        isResponding,
+        recordingTime,
+        lastUserMessage,
+        lastAIMessage
+      );
+    }
+  }, [isRecording, isProcessing, isResponding, recordingTime, lastUserMessage, lastAIMessage, onVoiceStateChange]);
 
   const startRecording = async () => {
     try {
@@ -178,18 +204,38 @@ export function VoiceChat({
       const data = await response.json()
       console.log("API response:", data)
       
+      // Update last messages for display
+      if (data.user_text) {
+        setLastUserMessage(data.user_text)
+        await onMessageSent(data.user_text, true)
+      }
+      
+      if (data.ai_text) {
+        setLastAIMessage(data.ai_text)
+      }
+      
       // Play audio response
       if (data.audio_data) {
         console.log("Playing audio response")
+        setIsProcessing(false)
+        setIsResponding(true)
+        
         const responseAudio = new Audio(data.audio_data)
+        
+        // When audio ends, reset responding state
+        responseAudio.addEventListener('ended', () => {
+          setIsResponding(false)
+        })
+        
         responseAudio.play()
         
-        // Update conversation UI with text
-        if (data.user_text) {
-          await onMessageSent(data.user_text, true)
+        // Update conversation UI with AI text
+        if (data.ai_text) {
+          await onMessageSent(data.ai_text)
         }
       } else {
         console.error("No audio data in response")
+        setIsProcessing(false)
         throw new Error("No audio response received")
       }
       
@@ -201,12 +247,12 @@ export function VoiceChat({
       toast.error("Error processing voice", {
         description: errorMessage
       })
-    } finally {
       setIsProcessing(false)
+      setIsResponding(false)
     }
   }
   
-  // Clean up on component unmount
+  // Clean up on component unmount or when mode changes
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -216,6 +262,11 @@ export function VoiceChat({
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop()
       }
+      
+      // Reset states
+      setIsRecording(false)
+      setIsProcessing(false)
+      setIsResponding(false)
     }
   }, [])
   
@@ -232,10 +283,10 @@ export function VoiceChat({
         <Button
           type="button"
           onClick={startRecording}
-          disabled={disabled || isProcessing || isWaiting}
+          disabled={disabled || isProcessing || isWaiting || isResponding}
           className={cn(
             "rounded-full h-14 w-14 bg-primary hover:bg-primary/90 text-primary-foreground",
-            (disabled || isProcessing || isWaiting) && "opacity-50 cursor-not-allowed"
+            (disabled || isProcessing || isWaiting || isResponding) && "opacity-50 cursor-not-allowed"
           )}
         >
           {isProcessing ? (
@@ -264,6 +315,8 @@ export function VoiceChat({
           "Recording... Click to stop"
         ) : isProcessing ? (
           "Processing your message..."
+        ) : isResponding ? (
+          "AI is responding..."
         ) : (
           "Click to start speaking"
         )}

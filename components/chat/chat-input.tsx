@@ -3,11 +3,12 @@
 import { useState, FormEvent, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, PlusCircle, Mic, Video } from "lucide-react"
+import { Send } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { ChatMode } from "./chat-mode-switcher"
 import { VoiceChat } from "./voice-chat"
+import { VoiceInteraction } from "./voice-interaction"
 
 interface ChatInputProps {
   onSend: (content: string, isUserMessage?: boolean) => Promise<void>;
@@ -16,7 +17,6 @@ interface ChatInputProps {
   setIsWaiting?: (waiting: boolean) => void;
   mode: ChatMode;
   characterId?: string;
-  setIsAISpeaking?: (speaking: boolean) => void;
 }
 
 export function ChatInput({ 
@@ -31,6 +31,14 @@ export function ChatInput({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [rows, setRows] = useState(1)
+  
+  // For voice UI state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isResponding, setIsResponding] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [lastUserMessage, setLastUserMessage] = useState("");
+  const [lastAIMessage, setLastAIMessage] = useState("");
   
   // Add debugging
   useEffect(() => {
@@ -79,6 +87,23 @@ export function ChatInput({
     }
   }
   
+  // Add functions to update voice UI state that can be passed to VoiceChat
+  const handleVoiceStateChange = (
+    recording: boolean, 
+    processing: boolean, 
+    responding: boolean,
+    time: number = 0,
+    userMsg: string = "",
+    aiMsg: string = ""
+  ) => {
+    setIsRecording(recording);
+    setIsProcessing(processing);
+    setIsResponding(responding);
+    setRecordingTime(time);
+    if (userMsg) setLastUserMessage(userMsg);
+    if (aiMsg) setLastAIMessage(aiMsg);
+  };
+  
   // Different input based on mode
   const renderInput = () => {
     if (mode === "voice") {
@@ -96,6 +121,7 @@ export function ChatInput({
             characterId={characterId}
             onMessageSent={onSend}
             isWaiting={isWaiting}
+            onVoiceStateChange={handleVoiceStateChange}
           />
         </div>
       )
@@ -107,6 +133,7 @@ export function ChatInput({
         <Textarea
           ref={textareaRef}
           placeholder="Type your message..."
+          rows={rows}
           className="min-h-[60px] border-0 focus-visible:ring-0 resize-none py-4 px-4 shadow-none"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -138,6 +165,19 @@ export function ChatInput({
 
   return (
     <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 py-2.5 shadow-lg">
+      {/* Voice interaction UI overlay - only shown in voice mode */}
+      {mode === "voice" && (isRecording || isProcessing || isResponding) && (
+        <VoiceInteraction
+          isRecording={isRecording}
+          isProcessing={isProcessing}
+          isResponding={isResponding}
+          recordingTime={recordingTime}
+          characterName={characterId ? "AI Assistant" : undefined}
+          lastUserMessage={lastUserMessage}
+          lastAIMessage={lastAIMessage}
+        />
+      )}
+      
       <form 
         onSubmit={handleSubmit} 
         className="container max-w-4xl mx-auto px-4"

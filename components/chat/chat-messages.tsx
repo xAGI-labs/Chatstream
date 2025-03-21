@@ -264,7 +264,8 @@ export function ChatMessages({
         </div>
       ))}
       
-      {isWaiting && (
+      {/* Only show typing indicator in text mode */}
+      {isWaiting && mode === "text" && (
         <div className="flex items-start">
           <div className="flex-shrink-0 mr-2 mt-0.5">
             <div className="h-8 w-8 rounded-full overflow-hidden bg-muted ring-2 ring-background">
