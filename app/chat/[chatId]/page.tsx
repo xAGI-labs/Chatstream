@@ -114,6 +114,7 @@ export default function ChatPage() {
           isWaiting={!!isWaiting} // Ensure boolean type
           setIsWaiting={setIsWaiting}
           mode={chatMode}
+          characterId={conversation?.characterId} // Make sure this is passed correctly
         />
       </div>
     </div>

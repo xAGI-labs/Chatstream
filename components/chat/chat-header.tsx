@@ -15,13 +15,13 @@ import {
 interface ChatHeaderProps {
   character?: {
     name: string;
-    imageUrl?: string | null; // Modified to accept null
+    imageUrl?: string | null;
   };
   title?: string;
-  loading?: boolean; // This only accepts boolean | undefined
+  loading?: boolean; // Keep this as boolean | undefined only
 }
 
-export function ChatHeader({ character, title, loading }: ChatHeaderProps) {
+export function ChatHeader({ character, title, loading = false }: ChatHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const router = useRouter();
   

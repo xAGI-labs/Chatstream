@@ -4,31 +4,41 @@ import { Message } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TypingIndicator } from "./typing-indicator"
-import { User as UserIcon, CheckCircle } from "lucide-react"
+import { User as UserIcon, CheckCircle, Mic } from "lucide-react"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { format } from "date-fns"
+import { ChatMode } from "./chat-mode-switcher"
 
 interface ChatMessagesProps {
   messages: Message[];
-  loading?: boolean; // Only boolean | undefined
-  isWaiting?: boolean; // Only boolean | undefined
+  loading?: boolean;
+  isWaiting?: boolean;
   character?: {
     name: string;
-    imageUrl?: string | null; // Updated to match ChatHeader
+    imageUrl?: string | null;
   };
+  mode?: ChatMode;
+  isAISpeaking?: boolean;
 }
 
 export function ChatMessages({ 
   messages, 
-  loading = false, // Provide default value
-  isWaiting = false, // Provide default value
-  character 
+  loading = false,
+  isWaiting = false,
+  character,
+  mode = "text",
+  isAISpeaking = false
 }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [characterImgError, setCharacterImgError] = useState(false);
   const [userImgError, setUserImgError] = useState(false);
   const { user } = useUser();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Make sure we handle null and empty strings properly
+  const isLoadingState = loading === true
+  const isWaitingState = isWaiting === true
+  const isAISpeakingState = isAISpeaking === true
 
   // Reset error state when character changes
   useEffect(() => {
@@ -74,9 +84,10 @@ export function ChatMessages({
       loading: !!loading,
       isWaiting: !!isWaiting,
       hasCharacter: !!character,
-      characterName: character?.name
+      characterName: character?.name,
+      mode // Log mode
     });
-  }, [messages, loading, isWaiting, character]);
+  }, [messages, loading, isWaiting, character, mode]);
 
   if (loading) {
     return (
@@ -86,6 +97,47 @@ export function ChatMessages({
         <MessageSkeleton />
       </div>
     )
+  }
+
+  // Show voice mode UI when in voice mode
+  if (mode === "voice") {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="mb-16">
+          {/* Character avatar */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20 mb-3">
+              {characterAvatarUrl ? (
+                <Image 
+                  src={characterAvatarUrl}
+                  alt={character?.name || "AI"}
+                  fill
+                  className="object-cover"
+                  onError={() => setCharacterImgError(true)}
+                  priority 
+                />
+              ) : (
+                <div className="bg-primary/20 h-full w-full flex items-center justify-center">
+                  <span className="font-semibold text-2xl text-primary">{character?.name?.[0] || 'A'}</span>
+                </div>
+              )}
+            </div>
+            <h3 className="text-lg font-medium">{character?.name || 'AI Assistant'}</h3>
+          </div>
+        </div>
+        
+        <div className="text-center max-w-md">
+          <p className="text-muted-foreground mb-2">
+            {isAISpeakingState 
+              ? `${character?.name || 'AI'} is speaking...` 
+              : `Talk to ${character?.name || 'your AI companion'} using your voice.`}
+          </p>
+          <div className="text-sm text-muted-foreground/70 mt-1">
+            Click the microphone button below to start a conversation.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!messages || messages.length === 0) {

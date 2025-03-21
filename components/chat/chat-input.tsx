@@ -7,13 +7,16 @@ import { Send, PlusCircle, Mic, Video } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { ChatMode } from "./chat-mode-switcher"
+import { VoiceChat } from "./voice-chat"
 
 interface ChatInputProps {
-  onSend: (content: string) => Promise<void>;
-  disabled?: boolean;
+  onSend: (content: string, isUserMessage?: boolean) => Promise<void>;
+  disabled?: boolean; 
   isWaiting?: boolean;
   setIsWaiting?: (waiting: boolean) => void;
   mode: ChatMode;
+  characterId?: string;
+  setIsAISpeaking?: (speaking: boolean) => void;
 }
 
 export function ChatInput({ 
@@ -21,7 +24,8 @@ export function ChatInput({
   disabled = false,
   isWaiting = false,
   setIsWaiting,
-  mode = "text"
+  mode = "text",
+  characterId = ""
 }: ChatInputProps) {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -63,7 +67,7 @@ export function ChatInput({
     try {
       setIsSubmitting(true)
       if (setIsWaiting) setIsWaiting(true)
-      await onSend(message)
+      await onSend(message, true) // Always true for text input
       setMessage("")
       // Reset height
       if (textareaRef.current) {
@@ -75,105 +79,62 @@ export function ChatInput({
     }
   }
   
-  const handleVoiceButtonClick = () => {
-    toast.info("Voice Mode Coming Soon", {
-      description: "We're working on adding voice capabilities!"
-    });
-  };
-  
-  const isActionDisabled = !message.trim() || disabled || isSubmitting;
-
   // Different input based on mode
   const renderInput = () => {
-    switch (mode) {
-      case "text":
-        return (
-          <>
-            {/* Left side buttons */}
-            <div className="absolute left-3 bottom-[13px] flex items-center space-x-1 z-10">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                disabled={disabled}
-              >
-                <PlusCircle className="h-[18px] w-[18px]" />
-              </Button>
-            </div>
-            
-            {/* Textarea with padding for buttons */}
-            <Textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              className={cn(
-                "flex-1 resize-none bg-transparent border-0 shadow-none focus-visible:ring-0 pl-14 pr-12 py-3 min-h-[50px] max-h-[120px] text-base"
-              )}
-              rows={rows}
-              disabled={disabled || isSubmitting}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit(e)
-                }
-              }}
-            />
-            
-            {/* Right side button */}
-            <div className="absolute right-3 bottom-[13px] z-10">
-              <Button 
-                type="submit" 
-                size="icon" 
-                className={cn(
-                  "h-8 w-8 rounded-full transition-all flex items-center justify-center",
-                  isActionDisabled 
-                    ? "bg-muted hover:bg-muted text-muted-foreground"
-                    : "bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg"
-                )}
-                disabled={isActionDisabled}
-              >
-                <Send className={cn("h-[18px] w-[18px]", isActionDisabled ? "" : "animate-pulse")} />
-              </Button>
-            </div>
-          </>
-        );
+    if (mode === "voice") {
+      // Make sure we have a valid characterId before rendering voice chat
+      if (!characterId) {
+        console.error("Missing characterId in chat-input for voice mode");
+      }
       
-      case "voice":
-        // For voice mode (coming soon)
-        return (
-          <div className="flex-1 flex items-center justify-center py-3">
-            <Button
-              type="button"
-              size="lg"
-              className="rounded-full h-14 w-14 bg-primary/20 hover:bg-primary/30"
-              onClick={handleVoiceButtonClick}
-            >
-              <Mic className="h-6 w-6 text-primary" />
-            </Button>
-          </div>
-        );
+      console.log("Rendering voice chat with characterId:", characterId);
       
-      case "video":
-        // For video mode (disabled)
-        return (
-          <div className="flex-1 flex items-center justify-center py-3">
-            <Button
-              type="button"
-              size="lg"
-              className="rounded-full h-14 w-14 bg-muted opacity-50"
-              disabled={true}
-            >
-              <Video className="h-6 w-6" />
-            </Button>
-          </div>
-        );
-      
-      default:
-        return null;
+      return (
+        <div className="flex w-full items-center justify-center py-4">
+          <VoiceChat 
+            disabled={disabled}
+            characterId={characterId}
+            onMessageSent={onSend}
+            isWaiting={isWaiting}
+          />
+        </div>
+      )
     }
-  };
+    
+    // Default to text mode
+    return (
+      <>
+        <Textarea
+          ref={textareaRef}
+          placeholder="Type your message..."
+          className="min-h-[60px] border-0 focus-visible:ring-0 resize-none py-4 px-4 shadow-none"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit(e)
+            }
+          }}
+          disabled={disabled || isWaiting}
+        />
+        <div className="absolute right-4 bottom-3.5 flex items-center">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={message.trim() === "" || disabled || isWaiting}
+            className={cn(
+              "rounded-full",
+              isWaiting && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            <Send className="h-4 w-4" />
+            <span className="sr-only">Send</span>
+          </Button>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky bottom-0 z-10 py-2.5 shadow-lg">
