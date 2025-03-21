@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
 import OpenAI from "openai";
+import { createReadStream } from 'fs';
+import { writeFile } from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
 const prisma = new PrismaClient();
 
@@ -18,23 +22,18 @@ export async function POST(req: Request) {
     
     if (!userId) {
       console.log("Unauthorized request (no user ID)");
-      return new NextResponse("Unauthorized: No user ID found", { status: 401 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
     
     console.log("Authorized user:", userId);
     
     // Parse the FormData
     const formData = await req.formData();
+    console.log("Form data received");
     
     // Extract data from the form
     const audioFile = formData.get("audio_file") as File;
     const characterId = formData.get("character_id") as string;
-    
-    console.log("Request data:", {
-      hasAudioFile: !!audioFile,
-      audioFileSize: audioFile?.size,
-      characterId: characterId || "MISSING"
-    });
     
     if (!audioFile) {
       console.error("No audio file in request");
@@ -49,33 +48,32 @@ export async function POST(req: Request) {
     console.log(`Processing for character: ${characterId}, Audio file type: ${audioFile.type}, size: ${audioFile.size} bytes`);
     
     // Get character from database
-    console.log(`Looking up character: ${characterId}`);
     const character = await prisma.character.findUnique({
       where: { id: characterId }
     });
     
     if (!character) {
       console.error(`Character not found: ${characterId}`);
-      return new NextResponse(`Character not found with ID: ${characterId}`, { status: 404 });
+      return new NextResponse("Character not found", { status: 404 });
     }
     
     console.log(`Character found: ${character.name}`);
     
-    // Convert audio file to buffer for OpenAI API
+    // Convert audio file to buffer
     const arrayBuffer = await audioFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     console.log(`Audio buffer created, size: ${buffer.length} bytes`);
     
+    // Save buffer to a temporary file (Node.js way to handle files for APIs)
+    const tempFilePath = path.join(os.tmpdir(), `audio-${Date.now()}.webm`);
+    await writeFile(tempFilePath, buffer);
+    console.log(`Saved audio to temporary file: ${tempFilePath}`);
+    
     // Step 1: Transcribe audio using Whisper
     console.log("Transcribing audio with Whisper API...");
     
-    // Create a temporary file object for the OpenAI API
-    const tempFile = new File([buffer], "audio.webm", { 
-      type: audioFile.type || "audio/webm" 
-    });
-    
     const transcription = await openai.audio.transcriptions.create({
-      file: tempFile,
+      file: createReadStream(tempFilePath),
       model: "whisper-1",
       language: "en"
     });
