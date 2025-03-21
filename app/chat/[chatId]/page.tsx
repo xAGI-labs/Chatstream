@@ -13,9 +13,21 @@ import { useConversation } from "@/hooks/use-conversation"
 export default function ChatPage() {
   const { chatId } = useParams()
   const { userId } = useAuth()
-  const { conversation, messages, sendMessage, loading } = useConversation(chatId as string)
+  const { conversation, messages, sendMessage, loading, refetchMessages } = useConversation(chatId as string)
   const [isWaiting, setIsWaiting] = useState(false)
   const [chatMode, setChatMode] = useState<ChatMode>("text")
+  
+  // Add a mode change handler that fetches latest messages when changing modes
+  const handleModeChange = async (newMode: ChatMode) => {
+    console.log(`Switching mode from ${chatMode} to ${newMode}`)
+    
+    // If switching from voice to text, refresh messages to ensure we have the latest
+    if (chatMode === "voice" && newMode === "text") {
+      await refetchMessages()
+    }
+    
+    setChatMode(newMode)
+  }
   
   // Debug conversation data
   useEffect(() => {
@@ -85,10 +97,10 @@ export default function ChatPage() {
           loading={!!loading} // Ensure it's boolean
         />
         
-        {/* Mode Switcher - now positioned below header with improved styling */}
+        {/* Mode Switcher - with updated handler */}
         <div className="bg-background/70 backdrop-blur-sm border-b border-border/40 py-1.5 shadow-sm">
           <div className="container max-w-4xl mx-auto px-4">
-            <ChatModeSwitcher mode={chatMode} setMode={setChatMode} />
+            <ChatModeSwitcher mode={chatMode} setMode={handleModeChange} />
           </div>
         </div>
         
@@ -107,8 +119,24 @@ export default function ChatPage() {
         
         {/* Chat Input */}
         <ChatInput 
-          onSend={async (content) => {
-            await sendMessage(content)
+          onSend={async (content, isUserMessage) => {
+            // Special case for refreshing messages after voice chat
+            if (content === "__REFRESH_MESSAGES__") {
+              console.log("Received refresh message request from voice chat")
+              await refetchMessages()
+              setIsWaiting(false)
+              return
+            }
+            
+            // Regular message handling for text mode
+            if (isUserMessage === true) {
+              await sendMessage(content, true) // This is a user message
+            } else if (isUserMessage === false) {
+              await sendMessage(content, false) // This is an AI message
+            } else {
+              // If isUserMessage is undefined, default to user message
+              await sendMessage(content, true)
+            }
             setIsWaiting(false)
           }}
           disabled={loading === true} // Ensure boolean type

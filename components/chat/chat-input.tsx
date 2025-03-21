@@ -75,7 +75,7 @@ export function ChatInput({
     try {
       setIsSubmitting(true)
       if (setIsWaiting) setIsWaiting(true)
-      await onSend(message, true) // Always true for text input
+      await onSend(message, true) // Always true for text input (it's a user message)
       setMessage("")
       // Reset height
       if (textareaRef.current) {

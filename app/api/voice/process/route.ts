@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     }
     
     // Create user message in database
-    await prisma.message.create({
+    const userMessage = await prisma.message.create({
       data: {
         content: userText || "Empty message", // Fallback for null content
         role: "user",
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
     });
     
     // Create AI message in database
-    await prisma.message.create({
+    const aiMessage = await prisma.message.create({
       data: {
         content: aiTextResponse || "No response", // Fallback for null content
         role: "assistant",
@@ -171,13 +171,23 @@ export async function POST(req: Request) {
       }
     });
     
+    // Update conversation timestamp to mark as recently updated
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { updatedAt: new Date() }
+    });
+    
     console.log("Voice processing completed successfully");
+    console.log(`Created messages in conversation ${conversation.id}`);
     
     return NextResponse.json({
       status: "success",
       user_text: userText,
       ai_text: aiTextResponse,
-      audio_data: `data:audio/mp3;base64,${audioBase64}`
+      audio_data: `data:audio/mp3;base64,${audioBase64}`,
+      conversation_id: conversation.id, // Send the conversation ID back
+      user_message_id: userMessage.id,
+      ai_message_id: aiMessage.id
     });
     
   } catch (error: unknown) {

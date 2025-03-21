@@ -202,12 +202,11 @@ export function VoiceChat({
       }
       
       const data = await response.json()
-      console.log("API response:", data)
+      console.log("Voice API response:", data)
       
-      // Update last messages for display
+      // Update last messages for display UI only
       if (data.user_text) {
         setLastUserMessage(data.user_text)
-        await onMessageSent(data.user_text, true)
       }
       
       if (data.ai_text) {
@@ -222,16 +221,31 @@ export function VoiceChat({
         
         const responseAudio = new Audio(data.audio_data)
         
-        // When audio ends, reset responding state
-        responseAudio.addEventListener('ended', () => {
+        // When audio ends, reset responding state and trigger refresh
+        responseAudio.addEventListener('ended', async () => {
           setIsResponding(false)
+          
+          // After audio finishes playing, ensure messages are refreshed
+          try {
+            console.log("Voice response ended, refreshing messages")
+            await onMessageSent("__REFRESH_MESSAGES__")
+          } catch (refreshError) {
+            console.error("Error refreshing messages after voice response:", refreshError)
+          }
         })
         
         responseAudio.play()
         
-        // Update conversation UI with AI text
-        if (data.ai_text) {
-          await onMessageSent(data.ai_text)
+        // Also initiate an immediate refresh to ensure the database message is captured
+        if (data.conversation_id) {
+          try {
+            // Slight delay to ensure database writes are completed
+            setTimeout(async () => {
+              await onMessageSent("__REFRESH_MESSAGES__")
+            }, 500)
+          } catch (error) {
+            console.error("Error triggering message refresh:", error)
+          }
         }
       } else {
         console.error("No audio data in response")

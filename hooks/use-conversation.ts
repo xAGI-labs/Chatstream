@@ -111,26 +111,29 @@ export function useConversation(chatId: string) {
     }
   }, [fetchedCharacter, conversation])
 
-  // Rest of the sendMessage function remains unchanged
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, isUserMessage: boolean = true) => {
     if (!userId || !chatId || !content.trim()) return
     
     // Optimistically add the user message
-    const userMessage: Message = {
+    const tempMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
-      role: "user",
+      role: isUserMessage ? "user" : "assistant", // Set role based on isUserMessage
       createdAt: new Date(),
       conversationId: chatId
     }
     
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => [...prev, tempMessage])
     
     try {
       const response = await fetch(`/api/conversations/${chatId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ 
+          content, 
+          conversationId: chatId,
+          role: isUserMessage ? "user" : "assistant" // Set role correctly
+        })
       })
       
       if (!response.ok) {
@@ -141,13 +144,13 @@ export function useConversation(chatId: string) {
       
       // Replace the optimistic message and add the AI response
       setMessages(prev => {
-        const filtered = prev.filter(msg => msg.id !== userMessage.id)
+        const filtered = prev.filter(msg => msg.id !== tempMessage.id)
         return [...filtered, data.userMessage, data.aiMessage]
       })
     } catch (error) {
       console.error("Error sending message:", error)
       // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== userMessage.id))
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
       
       toast.error("Failed to send message", {
         description: "Please try again"
@@ -155,8 +158,53 @@ export function useConversation(chatId: string) {
     }
   }
   
+  // Add a function to refresh messages without sending new ones
+  const refetchMessages = async () => {
+    if (!userId || !chatId) return
+    
+    try {
+      setLoading(true)
+      console.log("Manually refreshing messages for chat:", chatId)
+      
+      const response = await fetch(`/api/conversations/${chatId}?timestamp=${Date.now()}`, {
+        cache: 'no-store', // Ensure we're not getting cached data
+        headers: {
+          'pragma': 'no-cache',
+          'cache-control': 'no-cache'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to refresh messages: ${response.status} ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      console.log(`Refreshed messages: got ${data.messages?.length || 0} messages`)
+      
+      // Just update the messages array with the refreshed data
+      if (data.messages && Array.isArray(data.messages)) {
+        setMessages(data.messages)
+      } else {
+        console.warn("No messages array in refreshed data:", data)
+      }
+    } catch (error) {
+      console.error("Error refreshing messages:", error)
+      toast.error("Failed to refresh messages", {
+        description: "Please try again or reload the page"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+  
   // Include characterLoading in the overall loading state
   const isLoading = loading || (characterId && characterLoading);
   
-  return { conversation, messages, sendMessage, loading: isLoading }
+  return { 
+    conversation, 
+    messages, 
+    sendMessage, 
+    loading: isLoading,
+    refetchMessages // Add the new function to the return value
+  }
 }
