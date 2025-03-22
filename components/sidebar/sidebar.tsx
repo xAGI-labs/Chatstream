@@ -4,7 +4,17 @@ import { useState, useEffect } from "react"
 import { useAuth, useUser, UserButton } from "@clerk/nextjs"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { PlusCircle, Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { 
+  PlusCircle, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight,
+  Home,
+  MessageCircle,
+  Star,
+  Settings,
+  LogOut
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
@@ -13,6 +23,14 @@ import { ConversationList } from "./conversation-list"
 import { MobileNavigation } from "./mobile-navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
+import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface SidebarProps {
   setIsOpen?: (open: boolean) => void;
@@ -94,166 +112,200 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   return (
     <>
       <aside className={cn(
-        "border-r border-[#222222] flex flex-col transition-all duration-300 relative",
-        isCollapsed ? "w-[60px]" : "w-[220px]"
+        "border-r border-border/40 flex flex-col transition-all duration-300 relative bg-sidebar shadow-sm",
+        isCollapsed ? "w-[68px]" : "w-[240px]"
       )}>
         {/* Logo Section - Made clickable */}
-        <Link href="/" className={cn(
-          "p-4 flex items-center space-x-2", 
-          isCollapsed && "justify-center"
-        )}>
-          <Image 
-            src="/logo.png"
-            alt="Chatstream Logo"
-            width={120}
-            height={28}
-            className="h-6 w-auto"
-            priority
-          />
-          {!isCollapsed && <span className="text-sm font-medium text-white">charstream.xyz</span>}
-        </Link>
+        <div className="py-5 px-4 flex items-center justify-between border-b border-border/30">
+          <Link href="/" className={cn(
+            "flex items-center gap-2", 
+            isCollapsed && "justify-center w-full"
+          )}>
+            <div className={cn("flex items-center justify-center", isCollapsed ? "w-8 h-8" : "w-8 h-8")}>
+              <Image 
+                src="/logo.png"
+                alt="Chatstream Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+                priority
+              />
+            </div>
+            {!isCollapsed && <span className="text-sm font-semibold">Chatstream</span>}
+          </Link>
 
-        {/* Collapse Button - Visible on all routes */}
-        <div className="absolute top-4 -right-3">
+          {/* Collapse Button */}
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="icon" 
-            className="h-6 w-6 rounded-full border-[#333333] bg-background"
+            className={cn("h-6 w-6 rounded-full text-muted-foreground hover:text-foreground", 
+              isCollapsed && "absolute -right-3 bg-background shadow-sm border border-border/40"
+            )}
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
-            {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+            {isCollapsed ? 
+              <ChevronRight className="h-3.5 w-3.5" /> : 
+              <ChevronLeft className="h-3.5 w-3.5" />
+            }
           </Button>
         </div>
 
-        <div className={cn(
-          "p-4 pt-2",
-          isCollapsed && "flex justify-center"
-        )}>
-          <Button
-            onClick={handleCreateClick}
-            className={cn(
-              "justify-start h-8 text-xs",
-              isCollapsed ? "w-10 p-0" : "w-full"
-            )} 
-            variant="outline"
-          >
-            <PlusCircle className={cn("h-3.5 w-3.5", !isCollapsed && "mr-2")} />
-            {!isCollapsed && "Create Character"}
-          </Button>
-        </div>
+        {/* Main Navigation Section */}
+        <div className="flex flex-col flex-grow overflow-hidden">
+          <div className="px-3 py-4">
+            <TooltipProvider delayDuration={300}>
+              <div className="space-y-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link href="/">
+                      <Button
+                        variant={pathname === '/' ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full justify-start gap-3 font-medium",
+                          isCollapsed && "justify-center p-2 h-9 w-9"
+                        )}
+                      >
+                        <Home className={cn("h-4 w-4", 
+                          pathname === '/' ? "text-primary" : "text-muted-foreground")} 
+                        />
+                        {!isCollapsed && <span>Home</span>}
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsed && (
+                    <TooltipContent side="right">Home</TooltipContent>
+                  )}
+                </Tooltip>
 
-        <nav className="flex-1 overflow-y-auto">
-          {!isCollapsed && (
-            <>
-              <div className="px-3">
-                <Button variant="ghost" className="w-full justify-start mb-1 text-xs h-8 bg-[#1a1a1a] hover:bg-[#222222]">
-                  <div className="w-4 h-4 rounded-full bg-[#333333] mr-2 flex items-center justify-center">
-                    <Search className="h-3 w-3" />
-                  </div>
-                  Discover
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={handleCreateClick}
+                      variant="default"
+                      className={cn(
+                        "w-full justify-start gap-3 font-medium",
+                        isCollapsed && "justify-center p-2 h-9 w-9"
+                      )}
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                      {!isCollapsed && <span>New Character</span>}
+                    </Button>
+                  </TooltipTrigger>
+                  {isCollapsed && (
+                    <TooltipContent side="right">New Character</TooltipContent>
+                  )}
+                </Tooltip>
               </div>
+            </TooltipProvider>
+          </div>
 
-              <div className="px-4 py-2">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transform text-gray-500" />
-                  <Input
-                    type="search"
-                    placeholder="Search for Characters"
-                    className="pl-7 pr-2 py-1 h-8 text-xs bg-[#1a1a1a] border-[#222222] focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Recent conversations */}
-          <ConversationList isCollapsed={isCollapsed} />
-
+          {/* Search Bar - Only in expanded mode */}
           {!isCollapsed && (
-            <div className="px-3 py-2">
-              <h3 className="px-2 text-xs font-medium text-gray-500 mb-2">Favorites</h3>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white text-xs h-8 hover:bg-[#1a1a1a]"
-              >
-                <div className="w-5 h-5 rounded-full overflow-hidden mr-2">
-                  <Image
-                    src={harryPotterAvatar}
-                    alt="Harry Potter"
-                    width={20}
-                    height={20}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                    priority={true}
-                  />
-                </div>
-                Harry Potter
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-gray-300 hover:text-white text-xs h-8 hover:bg-[#1a1a1a]"
-              >
-                <div className="w-5 h-5 rounded-full overflow-hidden mr-2">
-                  <Image
-                    src={chotaBheemAvatar}
-                    alt="Chota Bheem"
-                    width={20}
-                    height={20}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                    priority={true}
-                  />
-                </div>
-                Chota Bheem
-              </Button>
+            <div className="px-3 mb-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 transform text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search"
+                  className="pl-8 h-9 text-sm bg-background/50"
+                />
+              </div>
             </div>
           )}
-        </nav>
 
-        <div className={cn(
-          "p-3 border-t border-[#222222]",
-          isCollapsed && "flex justify-center items-center"
-        )}>
+          {/* Section Label */}
+          {!isCollapsed && (
+            <div className="px-4 py-2">
+              <h3 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
+                Recent Chats
+              </h3>
+            </div>
+          )}
+
+          {/* Conversations List */}
+          <div className="flex-grow overflow-y-auto scrollbar-thin">
+            <ConversationList isCollapsed={isCollapsed} />
+          </div>
+
+          {/* Favorites Section */}
+          {!isCollapsed && (
+            <div className="px-3 py-3">
+              <h3 className="px-2 mb-2 text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">
+                Favorites
+              </h3>
+              <div className="space-y-1">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-sm h-9 rounded-md text-muted-foreground hover:text-foreground"
+                >
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={harryPotterAvatar} alt="Harry Potter" />
+                    <AvatarFallback>HP</AvatarFallback>
+                  </Avatar>
+                  <span className="truncate">Harry Potter</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 text-sm h-9 rounded-md text-muted-foreground hover:text-foreground"
+                >
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={chotaBheemAvatar} alt="Chota Bheem" />
+                    <AvatarFallback>CB</AvatarFallback>
+                  </Avatar>
+                  <span className="truncate">Chota Bheem</span>
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User Profile Section */}
+        <div className="p-3 border-t border-border/30 mt-auto">
           {isSignedIn ? (
             <div className={cn(
               "flex items-center",
-              isCollapsed ? "justify-center" : "justify-between"
+              isCollapsed ? "justify-center" : "justify-between p-2 bg-background/40 rounded-md"
             )}>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <UserButton afterSignOutUrl="/" />
-                {!isCollapsed && <span className="text-xs text-gray-300">{displayName}</span>}
+                {!isCollapsed && <span className="text-sm font-medium">{displayName}</span>}
               </div>
-              {!isCollapsed && <ChevronDown className="h-3.5 w-3.5 text-gray-500" />}
+              {!isCollapsed && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              )}
             </div>
           ) : (
             <div className={cn(
               "flex items-center",
               isCollapsed ? "justify-center" : "justify-between"
             )}>
-              <div className="w-7 h-7 rounded-full bg-[#333333] flex items-center justify-center text-xs text-white">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary">
                 ?
               </div>
               {!isCollapsed && (
                 <Button
                   size="sm"
-                  variant="outline"
                   onClick={() => setIsOpen?.(true)}
-                  className="text-xs"
                 >
                   Sign In
                 </Button>
               )}
             </div>
           )}
+          
           {!isCollapsed && (
-            <div className="mt-3 flex items-center justify-between text-[10px] text-gray-500">
-              <Link href="#" className="hover:text-gray-400">
-                Privacy Policy
+            <div className="mt-3 flex items-center justify-center gap-3 text-[10px] text-muted-foreground/60">
+              <Link href="#" className="hover:text-muted-foreground">
+                Privacy
               </Link>
-              <span>•</span>
-              <Link href="#" className="hover:text-gray-400">
-                Terms of Service
+              <Link href="#" className="hover:text-muted-foreground">
+                Terms
+              </Link>
+              <Link href="#" className="hover:text-muted-foreground">
+                Help
               </Link>
             </div>
           )}

@@ -209,7 +209,7 @@ export function MobileNavigation({
               className="h-6 w-auto"
               priority
             />
-            <span className="text-sm font-medium text-white">chatstream.ai</span>
+            <span className="text-sm font-medium text-white">charstream.xyz</span>
           </Link>
         </div>
         
