@@ -7,6 +7,11 @@ const openaiClient = new OpenAI({
   maxRetries: 1, // Minimal retries for low latency
 });
 
+// Export function to get the OpenAI client
+export function getOpenAIClient() {
+  return openaiClient;
+}
+
 // Define types that match OpenAI SDK's expected format
 type MessageRole = 'system' | 'user' | 'assistant' | 'function';
 

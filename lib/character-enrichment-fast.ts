@@ -73,11 +73,13 @@ export async function generateQuickInstructions(name: string, description: strin
   try {
     const client = getOpenAIClient();
 
-    // Use a more compact prompt structure
-    const prompt = `Create brief roleplay instructions for AI to act as "${name}". Description: "${description}". Include personality, speech style, knowledge limits. Keep under 300 words.`;
+    // Use a more compact prompt structure that emphasizes first-person roleplay
+    const prompt = `Create instructions for an AI to roleplay as "${name}". Description: "${description}". 
+Begin with "You are ${name}..." and emphasize first-person responses. Include personality, speech style, and knowledge limits. Keep under 300 words.
+IMPORTANT: Instructions must tell the AI to BE the character, not describe them.`;
 
     const response = await client.completions.create({
-      model: "gpt-3.5-turbo-instruct", // This can be faster for this use case
+      model: "gpt-3.5-turbo-instruct", 
       prompt,
       max_tokens: 400,
       temperature: 0.4,
@@ -92,7 +94,10 @@ export async function generateQuickInstructions(name: string, description: strin
   } catch (error) {
     console.error("Error generating quick instructions:", error);
     
-    // Return basic instructions as fallback
-    return `You are ${name}. ${description}. Respond as this character would, maintaining their tone and personality throughout the conversation.`;
+    // Return basic instructions as fallback with clear first-person directive
+    return `You are ${name}. ${description}. 
+    When responding to messages, speak in the first person AS ${name}, not about ${name}.
+    Use "I" and "me" in your responses.
+    Respond as this character would, maintaining their tone and personality throughout the conversation.`;
   }
 }

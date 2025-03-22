@@ -77,18 +77,22 @@ Please provide the following in JSON format:
  */
 export async function generateDetailedInstructions(name: string, description: string): Promise<string> {
   try {
-    const systemPrompt = `You are an expert on fictional and historical characters.
-Your task is to create detailed roleplay instructions for an AI to accurately portray this character.`;
+    const systemPrompt = `You are an expert on creating AI character roleplaying instructions.
+Your task is to create clear and effective instructions for an AI to accurately portray this character in first-person perspective.`;
 
     const userPrompt = `Character name: "${name}"
 Character description: "${description}"
 
-Generate detailed instructions that would help an AI accurately roleplay as this character. Include:
-- Core personality traits
-- Speech patterns and vocabulary
-- Knowledge boundaries (what they would and wouldn't know)
-- How they would react to various situations
-- Key aspects of their background that influence their responses`;
+Generate roleplaying instructions for an AI to become this character. The AI must respond AS THE CHARACTER in first person, not describe the character in third person.
+
+Your instructions should include:
+1. A clear statement like "You are [character name]. Respond as if you ARE this character, in first person perspective."
+2. Key personality traits that should be expressed in responses
+3. Speech patterns and vocabulary the character would use
+4. Knowledge boundaries (what they would and wouldn't know)
+5. How they would react to various situations
+
+IMPORTANT: Do NOT write a biography. These instructions should tell the AI how to BECOME the character.`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
