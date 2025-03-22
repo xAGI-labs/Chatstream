@@ -3,24 +3,15 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { AdminAuthProvider, useAdminAuth } from "@/lib/admin-auth"
+import { useAdminAuth } from "@/lib/admin-auth"
 import { withAdminAuth } from "@/lib/with-admin-auth"
 import { useRouter } from "next/navigation"
 import { CharacterManagement } from "@/components/admin/character-management"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
-  BarChart3, 
-  Users, 
-  MessageSquare, 
-  Settings, 
-  Shield, 
-  Home,
-  LogOut,
-  UserCircle,
   Loader2,
-  LineChart,
-  Activity
+  LineChart
 } from "lucide-react"
 import { usePostHog } from 'posthog-js/react'
 
@@ -177,86 +168,9 @@ function AdminDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <div className="w-64 border-r bg-sidebar text-sidebar-foreground p-4 flex flex-col">
-        <div className="mb-8 flex items-center gap-2 px-2">
-          <Shield className="h-6 w-6" />
-          <h1 className="text-xl font-bold">Admin Panel</h1>
-        </div>
-        
-        <div className="space-y-1">
-          <Button 
-            variant={activeTab === 'overview' ? "sidebar-primary" : "sidebar"} 
-            className="w-full justify-start" 
-            onClick={() => setActiveTab('overview')}
-          >
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Overview
-          </Button>
-          <Button 
-            variant={activeTab === 'users' ? "sidebar-primary" : "sidebar"} 
-            className="w-full justify-start" 
-            onClick={() => setActiveTab('users')}
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Users
-          </Button>
-          <Button 
-            variant={activeTab === 'characters' ? "sidebar-primary" : "sidebar"} 
-            className="w-full justify-start" 
-            onClick={() => setActiveTab('characters')}
-          >
-            <UserCircle className="h-4 w-4 mr-2" />
-            Characters
-          </Button>
-          <Button 
-            variant={activeTab === 'content' ? "sidebar-primary" : "sidebar"} 
-            className="w-full justify-start"
-            onClick={() => setActiveTab('content')}
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Content
-          </Button>
-          <Button 
-            variant="sidebar" 
-            className="w-full justify-start"
-            onClick={navigateToAnalytics}
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Analytics
-          </Button>
-          <Button 
-            variant="sidebar" 
-            className="w-full justify-start"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
-        </div>
-        
-        <div className="mt-auto space-y-1">
-          <Button 
-            variant="sidebar" 
-            className="w-full justify-start"
-            onClick={navigateToHome}
-          >
-            <Home className="h-4 w-4 mr-2" />
-            Back to Site
-          </Button>
-          <Button 
-            variant="sidebar" 
-            className="w-full justify-start"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-      </div>
-      
+    <div className="min-h-screen bg-background">
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="overflow-auto">
         <header className="p-4 border-b bg-background/80 backdrop-blur sticky top-0 z-10 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{
             activeTab === 'overview' ? 'Dashboard Overview' :
@@ -274,6 +188,13 @@ function AdminDashboardContent() {
         
         <main className="p-6">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="characters">Characters</TabsTrigger>
+              <TabsTrigger value="content">Content</TabsTrigger>
+            </TabsList>
+            
             <TabsContent value="overview">
               {stats.isLoading || posthogStats.isLoading ? (
                 <div className="flex items-center justify-center h-[60vh]">
@@ -479,9 +400,5 @@ const ProtectedAdminDashboard = withAdminAuth(AdminDashboardContent)
 
 // Export a wrapper component that provides the auth context
 export default function AdminDashboard() {
-  return (
-    <AdminAuthProvider>
-      <ProtectedAdminDashboard />
-    </AdminAuthProvider>
-  )
+  return <ProtectedAdminDashboard />
 }
