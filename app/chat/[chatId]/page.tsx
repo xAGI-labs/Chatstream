@@ -11,6 +11,8 @@ import { ChatModeSwitcher, ChatMode } from "@/components/chat/chat-mode-switcher
 import { useConversation } from "@/hooks/use-conversation"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
 import { toast } from "sonner"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { MobileNavigation } from "@/components/sidebar/mobile-navigation"
 
 export default function ChatPage() {
   const { chatId } = useParams()
@@ -21,6 +23,7 @@ export default function ChatPage() {
   const { setIsOpen } = useSignupDialog()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isUnhinged, setIsUnhinged] = useState(false)
+  const isMobile = useIsMobile()
   
   // Check localStorage for sidebar collapsed state on component mount
   useEffect(() => {
@@ -151,12 +154,27 @@ export default function ChatPage() {
   
   return (
     <div className="flex h-screen overflow-hidden bg-muted/10">
-      {/* Sidebar - Fix height issue when collapsed */}
-      <div className="h-full min-h-screen flex-shrink-0 transition-all duration-300" 
-           style={{ width: sidebarCollapsed ? '68px' : '240px' }}>
-        <Sidebar setIsOpen={setIsOpen} onCollapsedChange={setSidebarCollapsed} />
-      </div>
-      
+      {/* Sidebar - Completely hide on mobile */}
+      {!isMobile && (
+        <div
+          className="h-full min-h-screen flex-shrink-0 transition-all duration-300"
+          style={{ width: sidebarCollapsed ? '68px' : '240px' }}
+        >
+          <Sidebar setIsOpen={setIsOpen} onCollapsedChange={setSidebarCollapsed} />
+        </div>
+      )}
+
+      {/* Mobile Navigation - explicitly render on mobile */}
+      {isMobile && (
+        <MobileNavigation
+          isSignedIn={!!userId}
+          setSignupOpen={setIsOpen}
+          setCreateDialogOpen={() => {}}
+          isCreateDialogOpen={false}
+          displayName=""
+        />
+      )}
+
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 overflow-hidden relative">
         {/* Chat Header - pass loading as boolean */}

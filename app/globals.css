@@ -274,6 +274,89 @@
   button, a {
     min-height: 2.5rem;
   }
+  
+  /* Improved spacing and touch targets for mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Better touch targets on mobile */
+  button, 
+  a,
+  [role="button"] {
+    min-height: 2.5rem;
+  }
+  
+  /* Improved mobile form elements */
+  .mobile-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Enhanced mobile card styles */
+  .card-mobile {
+    border-radius: 1rem;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .card-mobile:active {
+    transform: scale(0.98);
+  }
+  
+  /* Bottom sheet dialog improvements */
+  .sheet-mobile {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Better mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+  }
+  
+  .mobile-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Mobile button improvements */
+  .button-mobile {
+    border-radius: 9999px;
+    height: 3rem;
+    font-weight: 500;
+  }
+  
+  /* Mobile bottom navigation safe area */
+  .mobile-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+}
+
+/* Additional utility classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* Modern selection styles */
+::selection {
+  background-color: hsl(var(--primary)/20%);
+  color: hsl(var(--primary));
+}
+
+/* Smoother transitions for all interactive elements */
+a, button, input, select, textarea, [role="button"] {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 

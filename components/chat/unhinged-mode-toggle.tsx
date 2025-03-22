@@ -42,19 +42,31 @@ export function UnhingedModeToggle({
   useEffect(() => {
     if (!isUnhinged || !remainingTime) return
 
+    console.log(`Unhinged mode timer started: ${remainingTime}ms remaining`)
+    
     const interval = setInterval(() => {
       setRemainingTime(prev => {
         if (!prev || prev <= 1000) {
           clearInterval(interval)
+          console.log("Unhinged mode timer expired, resetting to normal mode")
           onUnhingedChange(false)
           toast(`${characterName} has sobered up!`)
           return null
         }
+        
+        // Log remaining time every 30 seconds to avoid console spam
+        if (prev % 30000 === 0) {
+          console.log(`Unhinged mode timer: ${prev/1000} seconds remaining`)
+        }
+        
         return prev - 1000
       })
     }, 1000)
 
-    return () => clearInterval(interval)
+    return () => {
+      console.log("Clearing unhinged mode timer")
+      clearInterval(interval)
+    }
   }, [isUnhinged, remainingTime, onUnhingedChange, characterName])
 
   const handleAddonSelect = (type: 'beer' | 'joint') => {
