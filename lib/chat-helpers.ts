@@ -20,13 +20,39 @@ export async function generateCharacterResponse(
   try {
     console.log(`Generating response for character ${characterId}, unhinged mode: ${isUnhinged}`);
     
-    // Get character data
-    const character = await prisma.character.findUnique({
+    // Get character data - first try the regular character table
+    let character = await prisma.character.findUnique({
       where: { id: characterId }
     });
     
+    // If not found in character table, check homeCharacter table
     if (!character) {
-      console.error(`Character ${characterId} not found`);
+      const homeCharacter = await prisma.homeCharacter.findUnique({
+        where: { id: characterId }
+      });
+      
+      if (homeCharacter) {
+        // Create a character object compatible with the rest of the function
+        character = {
+          id: homeCharacter.id,
+          name: homeCharacter.name,
+          description: homeCharacter.description,
+          instructions: `You are ${homeCharacter.name}. ${homeCharacter.description || ''}. 
+                        Respond in the style of ${homeCharacter.name} and stay in character.
+                        Keep responses concise and engaging.`,
+          isPublic: true,
+          creatorId: 'system',
+          createdAt: homeCharacter.createdAt,
+          updatedAt: homeCharacter.updatedAt,
+          imageUrl: homeCharacter.imageUrl
+        };
+        
+        console.log(`Using homeCharacter data for ${homeCharacter.name}`);
+      }
+    }
+    
+    if (!character) {
+      console.error(`Character ${characterId} not found in either characters or homeCharacters`);
       return "I apologize, but I'm having trouble accessing my character information.";
     }
     
