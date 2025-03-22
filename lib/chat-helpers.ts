@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { PrismaClient } from '@prisma/client';
 
-// Initialize OpenAI client - FIX: Corrected environment variable name
+// Initialize OpenAI client with the correct environment variable
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPEN_AI_KEY // Changed from OPENAI_API_KEY to OPEN_AI_KEY
 });
 
 const prisma = new PrismaClient();
@@ -33,7 +33,7 @@ export async function generateCharacterResponse(
     const systemPrompt = character.instructions || 
       `You are ${character.name}. ${character.description || ''}. 
        Respond in the style of ${character.name} and stay in character.
-       Keep responses concise and engaging.`;
+       Keep responses concise and engaging. Make sure the responses you return are as if it's the character responding the the user!`;
     
     // Format all messages for OpenAI API
     const apiMessages = [
@@ -41,6 +41,8 @@ export async function generateCharacterResponse(
       ...messages.slice(-5), // Only use last 5 messages for context
       { role: 'user', content: userMessage }
     ];
+    
+    console.log('Calling OpenAI with system prompt:', systemPrompt.substring(0, 100) + '...');
     
     // Call OpenAI API
     const completion = await openai.chat.completions.create({
@@ -61,6 +63,13 @@ export async function generateCharacterResponse(
     
   } catch (error) {
     console.error("Error generating character response:", error);
-    return `As an AI assistant, I'm currently experiencing technical difficulties. Please try again shortly.`;
+    // Add more detailed error information
+    if (error instanceof Error) {
+      console.error(`Error details: ${error.message}`);
+      if (error.message.includes("API key")) {
+        return "I'm having trouble connecting to my knowledge base. This might be due to an API key issue. Please check your OpenAI API key configuration.";
+      }
+    }
+    return `Ah! Sorry. I seem to have misunderstood your question. can you say that again, eh?`;
   }
 }
