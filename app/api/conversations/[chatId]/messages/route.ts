@@ -27,9 +27,13 @@ export async function POST(
     const userId = user.id
     
     const body = await req.json()
+    // Explicitly log the full body to debug
+    console.log("Request body:", body);
+
     const { content, isUnhinged = false } = body
     
-    console.log(`Received message for chat ${chatId} with unhinged mode: ${isUnhinged}`)
+    // Add debugging to explicitly see if isUnhinged is received
+    console.log(`Received message for chat ${chatId} with unhinged mode: ${isUnhinged}, type: ${typeof isUnhinged}`)
     
     if (!content || typeof content !== "string" || content.trim() === "") {
       return new NextResponse("Message content is required", { status: 400 })

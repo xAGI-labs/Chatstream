@@ -111,14 +111,14 @@ export function useConversation(chatId: string) {
     }
   }, [fetchedCharacter, conversation])
 
-  const sendMessage = async (content: string, isUserMessage: boolean = true) => {
+  const sendMessage = async (content: string, isUserMessage: boolean = true, isUnhinged: boolean = false) => {
     if (!userId || !chatId || !content.trim()) return
     
     // Optimistically add the user message
     const tempMessage: Message = {
       id: `temp-${Date.now()}`,
       content,
-      role: isUserMessage ? "user" : "assistant", // Set role based on isUserMessage
+      role: isUserMessage ? "user" : "assistant",
       createdAt: new Date(),
       conversationId: chatId
     }
@@ -126,19 +126,16 @@ export function useConversation(chatId: string) {
     setMessages(prev => [...prev, tempMessage])
     
     try {
+      // Make sure we pass isUnhinged to the API
+      console.log(`useConversation: Sending message with unhinged mode: ${isUnhinged}`)
       const response = await fetch(`/api/conversations/${chatId}/messages`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          // Add cache control headers to prevent caching
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           content, 
           conversationId: chatId,
-          role: isUserMessage ? "user" : "assistant" // Set role correctly
+          role: isUserMessage ? "user" : "assistant",
+          isUnhinged // Add this explicitly 
         })
       })
       

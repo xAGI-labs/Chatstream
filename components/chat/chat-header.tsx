@@ -127,7 +127,10 @@ export function ChatHeader({
         {!loading && onUnhingedChange && character && (
           <UnhingedModeToggle 
             isUnhinged={isUnhinged} 
-            onUnhingedChange={onUnhingedChange}
+            onUnhingedChange={(newValue) => {
+              console.log(`Setting unhinged mode to: ${newValue}`);
+              onUnhingedChange(newValue);
+            }}
             characterName={character.name}
           />
         )}

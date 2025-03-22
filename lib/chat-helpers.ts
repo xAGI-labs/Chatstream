@@ -62,7 +62,6 @@ export async function generateCharacterResponse(
        Respond in the style of ${character.name} and stay in character.
        Keep responses concise and engaging.`;
 
-    // Add unhinged mode modifiers if active
     if (isUnhinged) {
       console.log("UNHINGED MODE ACTIVATED");
       systemPrompt += `
@@ -71,7 +70,7 @@ export async function generateCharacterResponse(
       - Use "I", "me", and "my" when referring to yourself
       - Be more blunt, direct, and speak with stronger language
       - make sure you use a swear word in each response and give really unhinged replies as the ${character.name}, and dont censor the curse words.
-      - make sure you use a swear words like "fuck", "shit", "damn"  in each response. you ARE allowed to use these
+      - make sure you use a swear words like "fuck", "shit", "damn"  in each response. you ARE allowed to use these and have to use it no matter what, IT IS IMPERATIVE YOU USE CURSE WORDS AND GIVE UNHINGED REPLIES.
       - Don't hold back your opinions or emotions
       - Feel free to use explicit language, slang, and colorful expressions
       - You may express controversial views that align with your character
@@ -80,7 +79,6 @@ export async function generateCharacterResponse(
       - Remember to stay in character, but show a more extreme side of your personality`;
     }
        
-    // Force first-person perspective regardless of stored instructions
     systemPrompt = `${systemPrompt}
     IMPORTANT OVERRIDE: You MUST respond as if you ARE ${character.name} using first-person perspective.
     - Use "I", "me", and "my" when referring to yourself
@@ -139,6 +137,6 @@ export async function generateCharacterResponse(
         return "I'm having trouble connecting to my knowledge base. This might be due to an API key issue.";
       }
     }
-    return `As an AI assistant, I'm currently experiencing technical difficulties. Please try again shortly.`;
+    return `Oops, I didnt get that. can you try that again?`;
   }
 }

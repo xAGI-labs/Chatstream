@@ -77,14 +77,26 @@ export default function ChatPage() {
     }
   }, [conversation, messages]);
 
+  // Update isUnhinged state to be more directly connected
+  useEffect(() => {
+    console.log(`Unhinged mode changed to: ${isUnhinged}`);
+  }, [isUnhinged]);
+
   // Update sendMessage to include unhinged state without depending on setMessages
   const sendMessage = async (content: string, isUserMessage: boolean = true) => {
     try {
       setIsWaiting(true)
       
-      // API request
+      // API request - explicitly log the unhinged state
       console.log(`Sending message with unhinged mode: ${isUnhinged}`)
-      const response = await originalSendMessage(content, isUserMessage)
+      const response = await fetch(`/api/conversations/${chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          content,
+          isUnhinged: isUnhinged  // Make sure we're passing the current state
+        })
+      })
       
       if (!response) {
         throw new Error("Failed to send message")
