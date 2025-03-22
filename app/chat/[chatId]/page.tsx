@@ -89,22 +89,27 @@ export default function ChatPage() {
       
       // API request - explicitly log the unhinged state
       console.log(`Sending message with unhinged mode: ${isUnhinged}`)
-      const response = await fetch(`/api/conversations/${chatId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          content,
-          isUnhinged: isUnhinged  // Make sure we're passing the current state
+      
+      // For user messages, we need to use the useConversation hook's sendMessage
+      // to ensure proper UI updates, but we need to modify it to include unhinged mode
+      if (isUserMessage) {
+        // Add user message through hook to update local UI immediately
+        await originalSendMessage(content, isUserMessage, isUnhinged);
+      } else {
+        // Direct API call for non-user messages
+        const response = await fetch(`/api/conversations/${chatId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            content,
+            isUnhinged  // Pass the current state directly
+          })
         })
-      })
-      
-      if (!response) {
-        throw new Error("Failed to send message")
+        
+        if (!response.ok) {
+          throw new Error("Failed to send message")
+        }
       }
-      
-      // Don't refetch messages if we already have the response
-      // This prevents the unnecessary page refresh
-      // await refetchMessages()
       
     } catch (error) {
       console.error("Error sending message:", error)
@@ -194,16 +199,17 @@ export default function ChatPage() {
               return
             }
             
-            // Regular message handling for text mode
-            if (isUserMessage === true) {
-              await sendMessage(content, true) // This is a user message
-            } else if (isUserMessage === false) {
-              await sendMessage(content, false) // This is an AI message
-            } else {
-              // If isUserMessage is undefined, default to user message
+            // Set waiting state manually
+            setIsWaiting(true)
+            
+            // Regular message handling
+            if (isUserMessage === true || isUserMessage === undefined) {
+              // For user messages, pass the unhinged state through our modified sendMessage
               await sendMessage(content, true)
+            } else {
+              // For AI messages
+              await sendMessage(content, false)
             }
-            setIsWaiting(false)
           }}
           disabled={loading === true} // Ensure boolean type
           isWaiting={!!isWaiting} // Ensure boolean type
