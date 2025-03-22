@@ -20,8 +20,9 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
     
-    // Access chatId from context.params, not destructuring directly
-    const chatId = context.params.chatId;
+    // Fix: Await the params before accessing chatId
+    const params = await context.params
+    const chatId = params.chatId
     
     if (!chatId) {
       return new NextResponse("Chat ID is required", { status: 400 })
@@ -105,7 +106,9 @@ export async function PATCH(
       return new NextResponse("Unauthorized", { status: 401 })
     }
     
-    const chatId = context.params.chatId;
+    // Fix: Await the params before accessing chatId
+    const params = await context.params
+    const chatId = params.chatId
     
     if (!chatId) {
       return new NextResponse("Chat ID is required", { status: 400 })
@@ -155,7 +158,9 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 401 })
     }
     
-    const chatId = context.params.chatId;
+    // Fix: Await the params before accessing chatId
+    const params = await context.params
+    const chatId = params.chatId
     
     if (!chatId) {
       return new NextResponse("Chat ID is required", { status: 400 })

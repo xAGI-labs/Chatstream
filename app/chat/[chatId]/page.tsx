@@ -84,22 +84,15 @@ export default function ChatPage() {
       
       // API request
       console.log(`Sending message with unhinged mode: ${isUnhinged}`)
-      const response = await fetch(`/api/conversations/${chatId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          content,
-          isUnhinged  // Pass the unhinged state to the API
-        })
-      })
+      const response = await originalSendMessage(content, isUserMessage)
       
-      if (!response.ok) {
+      if (!response) {
         throw new Error("Failed to send message")
       }
       
-      // Just do a partial refresh to get the latest message
-      // This is more efficient than a full refetch
-      await refetchMessages()
+      // Don't refetch messages if we already have the response
+      // This prevents the unnecessary page refresh
+      // await refetchMessages()
       
     } catch (error) {
       console.error("Error sending message:", error)

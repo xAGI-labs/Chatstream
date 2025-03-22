@@ -14,7 +14,10 @@ export async function POST(
   context: { params: { chatId: string } }
 ) {
   try {
-    const { chatId } = context.params
+    // Fix: Await the params before accessing chatId
+    const params = await context.params
+    const chatId = params.chatId
+    
     const user = await currentUser()
     
     if (!user) {

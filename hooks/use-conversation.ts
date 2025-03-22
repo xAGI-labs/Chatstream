@@ -128,7 +128,13 @@ export function useConversation(chatId: string) {
     try {
       const response = await fetch(`/api/conversations/${chatId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          // Add cache control headers to prevent caching
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: JSON.stringify({ 
           content, 
           conversationId: chatId,
@@ -147,14 +153,20 @@ export function useConversation(chatId: string) {
         const filtered = prev.filter(msg => msg.id !== tempMessage.id)
         return [...filtered, data.userMessage, data.aiMessage]
       })
+      
+      // Prevent the refetch that causes the page refresh
+      return { userMessage: data.userMessage, aiMessage: data.aiMessage }
     } catch (error) {
       console.error("Error sending message:", error)
+      
       // Remove the optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
       
       toast.error("Failed to send message", {
         description: "Please try again"
       })
+      
+      throw error; // Rethrow to allow caller to handle
     }
   }
   

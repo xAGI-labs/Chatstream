@@ -72,20 +72,28 @@ export function ChatInput({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     
-    if (!message.trim() || disabled || isSubmitting) return
+    if (!message.trim() || isSubmitting) return
     
     try {
       setIsSubmitting(true)
       if (setIsWaiting) setIsWaiting(true)
-      await onSend(message, true) // Always true for text input (it's a user message)
+      
+      const messageToSend = message
       setMessage("")
-      // Reset height
+      
+      // Reset height and rows
       if (textareaRef.current) {
-        textareaRef.current.style.height = '40px';
+        textareaRef.current.style.height = 'auto'
+        setRows(1)
       }
-      setRows(1);
+      
+      await onSend(messageToSend, true)
+    } catch (error) {
+      console.error("Error sending message:", error)
     } finally {
       setIsSubmitting(false)
+      // Don't set isWaiting to false here - let the parent component handle that
+      // This prevents competing state updates
     }
   }
   
