@@ -32,11 +32,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
+// Update the SidebarProps interface
 interface SidebarProps {
   setIsOpen?: (open: boolean) => void;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ setIsOpen }: SidebarProps) {
+export function Sidebar({ setIsOpen, onCollapsedChange }: SidebarProps) {
   const { isSignedIn } = useAuth()
   const { user } = useUser()
   const pathname = usePathname()
@@ -66,8 +68,12 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
     const savedCollapsedState = localStorage.getItem('sidebarCollapsed')
     if (savedCollapsedState !== null && !isMobile) {
       setIsCollapsed(JSON.parse(savedCollapsedState))
+      // Notify parent component on initial load
+      if (onCollapsedChange) {
+        onCollapsedChange(JSON.parse(savedCollapsedState))
+      }
     }
-  }, [isMobile])
+  }, [isMobile, onCollapsedChange])
   
   // Save collapsed state to localStorage whenever it changes
   useEffect(() => {
@@ -95,6 +101,22 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
   const harryPotterAvatar = `/api/avatar?name=Harry%20Potter&width=20&height=20&cache=true&t=1`
   const chotaBheemAvatar = `/api/avatar?name=Chota%20Bheem&width=20&height=20&cache=true&t=1`
 
+  // Update the collapsed state and notify parent
+  const toggleCollapsed = () => {
+    const newCollapsedState = !isCollapsed
+    setIsCollapsed(newCollapsedState)
+    
+    // Notify parent component
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsedState)
+    }
+    
+    // Save to localStorage
+    if (!isMobile) {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(newCollapsedState))
+    }
+  }
+
   // Render mobile navigation on small screens
   if (isMobile) {
     return (
@@ -113,6 +135,7 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
     <>
       <aside className={cn(
         "border-r border-border/40 flex flex-col transition-all duration-300 relative bg-sidebar shadow-sm",
+        "h-full min-h-screen", // Ensure sidebar always has full height
         isCollapsed ? "w-[68px]" : "w-[240px]"
       )}>
         {/* Logo Section - Made clickable */}
@@ -131,7 +154,7 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
                 priority
               />
             </div>
-            {!isCollapsed && <span className="text-sm font-semibold">Chatstream</span>}
+            {!isCollapsed && <span className="text-sm font-semibold">charstream.xyz</span>}
           </Link>
 
           {/* Collapse Button */}
@@ -141,7 +164,7 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
             className={cn("h-6 w-6 rounded-full text-muted-foreground hover:text-foreground", 
               isCollapsed && "absolute -right-3 bg-background shadow-sm border border-border/40"
             )}
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggleCollapsed} // Use the updated function
           >
             {isCollapsed ? 
               <ChevronRight className="h-3.5 w-3.5" /> : 
@@ -150,8 +173,8 @@ export function Sidebar({ setIsOpen }: SidebarProps) {
           </Button>
         </div>
 
-        {/* Main Navigation Section */}
-        <div className="flex flex-col flex-grow overflow-hidden">
+        {/* Main Navigation Section - Ensure it grows to fill available space */}
+        <div className="flex flex-col flex-grow overflow-hidden min-h-0">
           <div className="px-3 py-4">
             <TooltipProvider delayDuration={300}>
               <div className="space-y-1">

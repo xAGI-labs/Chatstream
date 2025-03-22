@@ -9,6 +9,7 @@ import { ChatMessages } from "@/components/chat/chat-messages"
 import { ChatInput } from "@/components/chat/chat-input"
 import { ChatModeSwitcher, ChatMode } from "@/components/chat/chat-mode-switcher"
 import { useConversation } from "@/hooks/use-conversation"
+import { useSignupDialog } from "@/hooks/use-signup-dialog"
 
 export default function ChatPage() {
   const { chatId } = useParams()
@@ -16,6 +17,29 @@ export default function ChatPage() {
   const { conversation, messages, sendMessage, loading, refetchMessages } = useConversation(chatId as string)
   const [isWaiting, setIsWaiting] = useState(false)
   const [chatMode, setChatMode] = useState<ChatMode>("text")
+  const { setIsOpen } = useSignupDialog()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  
+  // Check localStorage for sidebar collapsed state on component mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('sidebarCollapsed')
+    if (savedState !== null) {
+      setSidebarCollapsed(JSON.parse(savedState))
+    }
+  }, [])
+  
+  // Listen for changes to sidebar collapsed state
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedState = localStorage.getItem('sidebarCollapsed')
+      if (savedState !== null) {
+        setSidebarCollapsed(JSON.parse(savedState))
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
   
   // Add a mode change handler that fetches latest messages when changing modes
   const handleModeChange = async (newMode: ChatMode) => {
@@ -83,9 +107,10 @@ export default function ChatPage() {
   
   return (
     <div className="flex h-screen overflow-hidden bg-muted/10">
-      {/* Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
+      {/* Sidebar - Fix height issue when collapsed */}
+      <div className="h-full min-h-screen flex-shrink-0 transition-all duration-300" 
+           style={{ width: sidebarCollapsed ? '68px' : '240px' }}>
+        <Sidebar setIsOpen={setIsOpen} onCollapsedChange={setSidebarCollapsed} />
       </div>
       
       {/* Main Chat Area */}

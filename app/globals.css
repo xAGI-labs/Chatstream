@@ -232,6 +232,29 @@
   textarea {
     transition: height 0.1s ease;
   }
+  
+  /* Sidebar height fix */
+  .sidebar-container {
+    height: 100vh;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ensure child elements respect the height */
+  .sidebar-content {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* For mobile viewport adjustments */
+  @media (max-width: 767px) {
+    .sidebar-container {
+      height: calc(100vh - 4rem); /* Account for the mobile header */
+    }
+  }
 }
 
 /* Mobile UI improvements */
