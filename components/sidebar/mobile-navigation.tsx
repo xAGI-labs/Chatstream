@@ -293,7 +293,7 @@ export function MobileNavigation({
       {/* Floating action button for creating character */}
       <Button
         onClick={handleCreateClick}
-        className="fixed right-4 bottom-20 h-14 w-14 rounded-full shadow-lg"
+        className="fixed right-4 bottom-20 h-14 w-14 rounded-full shadow-lg z-50"
       >
         <PlusCircle className="h-6 w-6" />
       </Button>
