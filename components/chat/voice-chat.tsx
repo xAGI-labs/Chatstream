@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react"
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle, ForwardedRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Mic, Square, Loader2, Volume2, PhoneOff, Repeat } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
@@ -23,6 +23,7 @@ interface VoiceChatProps {
     aiMessage?: string
   ) => void;
   onCallActiveChange?: (active: boolean) => void;
+  isUnhinged?: boolean;
 }
 
 interface VoiceChatMethods {
@@ -36,8 +37,9 @@ export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({
   disabled,
   isWaiting,
   onVoiceStateChange,
-  onCallActiveChange
-}, ref) => {
+  onCallActiveChange,
+  isUnhinged = false
+}: VoiceChatProps, ref: ForwardedRef<VoiceChatMethods>) => {
   const [isRecording, setIsRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isResponding, setIsResponding] = useState(false)
@@ -212,8 +214,9 @@ export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({
       const formData = new FormData()
       formData.append('audio_file', audioBlob, 'recording.webm')
       formData.append('character_id', characterId)
+      formData.append('is_unhinged', isUnhinged.toString())
       
-      console.log(`Sending audio to API for processing (characterId: ${characterId})...`)
+      console.log(`Sending audio to API for processing (characterId: ${characterId}, unhinged: ${isUnhinged})...`)
       
       // Call our API endpoint
       const response = await fetch('/api/voice/process', {
@@ -235,8 +238,14 @@ export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({
         setLastUserMessage(data.user_text)
       }
       
+      // Update AI message and clean any "*As character*:" prefix
       if (data.ai_text) {
-        setLastAIMessage(data.ai_text)
+        let cleanedResponse = data.ai_text
+        // Remove any "*As character*:" prefix if present
+        if (cleanedResponse.includes('*As ') && cleanedResponse.includes('*:')) {
+          cleanedResponse = cleanedResponse.replace(/\*As [^*]+\*:\s*/, '')
+        }
+        setLastAIMessage(cleanedResponse)
       }
       
       // Play audio response

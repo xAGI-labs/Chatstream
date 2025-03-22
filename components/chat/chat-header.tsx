@@ -1,7 +1,9 @@
+"use client"
+
 import Image from "next/image"
 import { useState, useEffect } from 'react'
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowLeft, MoreVertical, Info } from "lucide-react"
+import { ArrowLeft, MoreVertical, Info, Settings, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -11,17 +13,27 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
+import { UnhingedModeToggle } from "./unhinged-mode-toggle"
 
 interface ChatHeaderProps {
   character?: {
     name: string;
     imageUrl?: string | null;
+    id?: string;
   };
   title?: string;
   loading?: boolean; // Keep this as boolean | undefined only
+  isUnhinged?: boolean;
+  onUnhingedChange?: (value: boolean) => void;
 }
 
-export function ChatHeader({ character, title, loading = false }: ChatHeaderProps) {
+export function ChatHeader({ 
+  character, 
+  title, 
+  loading = false,
+  isUnhinged = false,
+  onUnhingedChange
+}: ChatHeaderProps) {
   const [imgError, setImgError] = useState(false);
   const router = useRouter();
   
@@ -111,32 +123,18 @@ export function ChatHeader({ character, title, loading = false }: ChatHeaderProp
         )}
       </div>
       
-      <div className="flex items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground"
-          aria-label="Character info"
-        >
-          <Info className="h-4 w-4" />
+      <div className="flex items-center space-x-2">
+        {!loading && onUnhingedChange && character && (
+          <UnhingedModeToggle 
+            isUnhinged={isUnhinged} 
+            onUnhingedChange={onUnhingedChange}
+            characterName={character.name}
+          />
+        )}
+        
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Settings className="h-4 w-4" />
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground"
-              aria-label="More options"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Reset conversation</DropdownMenuItem>
-            <DropdownMenuItem>Export chat</DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">Delete conversation</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   )

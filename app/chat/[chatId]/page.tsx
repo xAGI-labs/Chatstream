@@ -10,15 +10,17 @@ import { ChatInput } from "@/components/chat/chat-input"
 import { ChatModeSwitcher, ChatMode } from "@/components/chat/chat-mode-switcher"
 import { useConversation } from "@/hooks/use-conversation"
 import { useSignupDialog } from "@/hooks/use-signup-dialog"
+import { toast } from "sonner"
 
 export default function ChatPage() {
   const { chatId } = useParams()
   const { userId } = useAuth()
-  const { conversation, messages, sendMessage, loading, refetchMessages } = useConversation(chatId as string)
+  const { conversation, messages, sendMessage: originalSendMessage, loading, refetchMessages } = useConversation(chatId as string)
   const [isWaiting, setIsWaiting] = useState(false)
   const [chatMode, setChatMode] = useState<ChatMode>("text")
   const { setIsOpen } = useSignupDialog()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [isUnhinged, setIsUnhinged] = useState(false)
   
   // Check localStorage for sidebar collapsed state on component mount
   useEffect(() => {
@@ -75,6 +77,38 @@ export default function ChatPage() {
     }
   }, [conversation, messages]);
 
+  // Update sendMessage to include unhinged state without depending on setMessages
+  const sendMessage = async (content: string, isUserMessage: boolean = true) => {
+    try {
+      setIsWaiting(true)
+      
+      // API request
+      console.log(`Sending message with unhinged mode: ${isUnhinged}`)
+      const response = await fetch(`/api/conversations/${chatId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          content,
+          isUnhinged  // Pass the unhinged state to the API
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to send message")
+      }
+      
+      // Just do a partial refresh to get the latest message
+      // This is more efficient than a full refetch
+      await refetchMessages()
+      
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast.error("Failed to send message")
+    } finally {
+      setIsWaiting(false)
+    }
+  }
+
   // Authentication check
   if (!userId) {
     return (
@@ -120,6 +154,8 @@ export default function ChatPage() {
           character={characterData}
           title={conversation?.title}
           loading={!!loading} // Ensure it's boolean
+          isUnhinged={isUnhinged}
+          onUnhingedChange={setIsUnhinged}
         />
         
         {/* Mode Switcher - with updated handler */}

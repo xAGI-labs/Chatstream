@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { PrismaClient } from "@prisma/client"
+import { currentUser } from "@clerk/nextjs/server"
 import { generateCharacterResponse } from "@/lib/chat-helpers"
 
 const prisma = new PrismaClient()
@@ -14,20 +14,19 @@ export async function POST(
   context: { params: { chatId: string } }
 ) {
   try {
-    const { userId } = await auth();
+    const { chatId } = context.params
+    const user = await currentUser()
     
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    if (!user) {
+      return new NextResponse("Unauthorized", { status: 401 })
     }
     
-    const chatId = context.params.chatId;
-    
-    if (!chatId) {
-      return new NextResponse("Chat ID is required", { status: 400 });
-    }
+    const userId = user.id
     
     const body = await req.json()
-    const { content } = body
+    const { content, isUnhinged = false } = body
+    
+    console.log(`Received message for chat ${chatId} with unhinged mode: ${isUnhinged}`)
     
     if (!content || typeof content !== "string" || content.trim() === "") {
       return new NextResponse("Message content is required", { status: 400 })
@@ -95,14 +94,15 @@ export async function POST(
           content: m.content
         }));
       
-      // Generate response directly - no more API-to-API calls
+      // Generate response directly - passing unhinged status
       aiResponse = await generateCharacterResponse(
         conversation.characterId, 
         recentMessages,
-        content
+        content,
+        isUnhinged
       );
       
-      console.log(`Generated response for conversation ${chatId}`);
+      console.log(`Generated response for conversation ${chatId}, unhinged: ${isUnhinged}`);
     } catch (error) {
       console.error("Error generating AI response:", error);
       aiResponse = `I apologize, but I'm having temporary technical difficulties. Please try again in a moment.`;
