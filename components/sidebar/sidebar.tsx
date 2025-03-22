@@ -284,7 +284,7 @@ export function Sidebar({ setIsOpen, onCollapsedChange }: SidebarProps) {
         </div>
 
         {/* User Profile Section */}
-        <div className="p-3 border-t border-border/30 mt-auto">
+        <div className="p-3 border-t border-border/30 mt-auto cursor-pointer">
           {isSignedIn ? (
             <div className={cn(
               "flex items-center",
@@ -295,7 +295,7 @@ export function Sidebar({ setIsOpen, onCollapsedChange }: SidebarProps) {
                 {!isCollapsed && <span className="text-sm font-medium">{displayName}</span>}
               </div>
               {!isCollapsed && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full cursor-pointer">
                   <Settings className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               )}
