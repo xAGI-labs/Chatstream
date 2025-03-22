@@ -18,6 +18,7 @@ interface ChatInputProps {
   setIsWaiting?: (waiting: boolean) => void;
   mode: ChatMode;
   characterId?: string;
+  isUnhinged?: boolean; // Add isUnhinged prop
 }
 
 export function ChatInput({ 
@@ -26,7 +27,8 @@ export function ChatInput({
   isWaiting = false,
   setIsWaiting,
   mode = "text",
-  characterId = ""
+  characterId = "",
+  isUnhinged = false  // Add isUnhinged prop with default value
 }: ChatInputProps) {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -154,6 +156,7 @@ export function ChatInput({
             isWaiting={isWaiting}
             onVoiceStateChange={handleVoiceStateChange}
             onCallActiveChange={setCallActive}
+            isUnhinged={isUnhinged} // Pass isUnhinged to VoiceChat
           />
         </div>
       )

@@ -216,6 +216,7 @@ export default function ChatPage() {
           setIsWaiting={setIsWaiting}
           mode={chatMode}
           characterId={conversation?.characterId} // Make sure this is passed correctly
+          isUnhinged={isUnhinged} // Pass the unhinged state to ChatInput
         />
       </div>
     </div>

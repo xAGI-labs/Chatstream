@@ -57,8 +57,15 @@ export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({
 
   // Debug information
   useEffect(() => {
-    console.log("VoiceChat props:", { characterId, disabled, isWaiting, continuousMode, callActive })
-  }, [characterId, disabled, isWaiting, continuousMode, callActive])
+    console.log("VoiceChat props:", { 
+      characterId, 
+      disabled, 
+      isWaiting, 
+      continuousMode, 
+      callActive,
+      isUnhinged // Log the isUnhinged state
+    })
+  }, [characterId, disabled, isWaiting, continuousMode, callActive, isUnhinged])
 
   // Update the parent component with state changes
   useEffect(() => {
@@ -216,6 +223,7 @@ export const VoiceChat = forwardRef<VoiceChatMethods, VoiceChatProps>(({
       formData.append('character_id', characterId)
       formData.append('is_unhinged', isUnhinged.toString())
       
+      // Add debug log to confirm the unhinged state being sent
       console.log(`Sending audio to API for processing (characterId: ${characterId}, unhinged: ${isUnhinged})...`)
       
       // Call our API endpoint
