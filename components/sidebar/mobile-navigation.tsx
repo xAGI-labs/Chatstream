@@ -42,6 +42,7 @@ export function MobileNavigation({
   const router = useRouter()
   const pathname = usePathname()
   const [showSearch, setShowSearch] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
   
   const handleCreateClick = () => {
     if (!isSignedIn) {
@@ -60,17 +61,17 @@ export function MobileNavigation({
 
   return (
     <>
-      {/* Top navigation bar */}
-      <div className="fixed top-0 left-0 right-0 h-16 border-b border-[#222222] bg-background z-40 px-4 flex items-center justify-between">
+      {/* Top navigation bar - increase z-index to prevent elements showing through */}
+      <div className="fixed top-0 left-0 right-0 h-16 border-b border-border/30 bg-background z-[100] px-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {/* Sidebar menu trigger */}
-          <Sheet>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-[#222222] bg-background">
+            <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 border-r border-border/30 bg-background">
               <SheetHeader className="border-b border-[#222222] p-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="flex items-center space-x-2">
@@ -109,22 +110,26 @@ export function MobileNavigation({
                       </Button>
                     </Link>
                   </SheetClose>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-base"
-                    onClick={() => setShowSearch(!showSearch)}
-                  >
-                    <Search className="mr-3 h-5 w-5" />
-                    Discover
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-base"
-                    onClick={handleCreateClick}
-                  >
-                    <PlusCircle className="mr-3 h-5 w-5" />
-                    Create Character
-                  </Button>
+                  <SheetClose asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-base"
+                      onClick={() => setShowSearch(!showSearch)}
+                    >
+                      <Search className="mr-3 h-5 w-5" />
+                      Discover
+                    </Button>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-base"
+                      onClick={handleCreateClick}
+                    >
+                      <PlusCircle className="mr-3 h-5 w-5" />
+                      Create Character
+                    </Button>
+                  </SheetClose>
                 </div>
                 
                 <div className="mt-6">
@@ -290,17 +295,16 @@ export function MobileNavigation({
         </div>
       </div>
       
-      {/* Floating action button for creating character */}
+      {/* Floating action button for creating character - increased z-index */}
       <Button
         onClick={handleCreateClick}
-        className="fixed right-4 bottom-20 h-14 w-14 rounded-full shadow-lg z-50"
+        className="fixed right-4 bottom-20 h-14 w-14 rounded-full shadow-lg z-[100]"
       >
         <PlusCircle className="h-6 w-6" />
       </Button>
       
-      
-      {/* Add padding to page content */}
-      <div className="h-16 pb-16"></div>
+      {/* Add padding to page content - increased for better spacing */}
+      <div className="h-16 pb-20"></div>
       
       {/* Character creation dialog */}
       <CreateCharacterDialog

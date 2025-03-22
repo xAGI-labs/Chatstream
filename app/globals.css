@@ -234,4 +234,23 @@
   }
 }
 
+/* Mobile UI improvements */
+@media (max-width: 767px) {
+  /* Ensure no content appears behind fixed mobile navbar */
+  body {
+    padding-top: 4rem;
+  }
+  
+  /* Improved spacing for mobile content */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Better touch targets on mobile */
+  button, a {
+    min-height: 2.5rem;
+  }
+}
+
 
